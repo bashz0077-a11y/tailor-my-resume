@@ -4,4 +4,7 @@ export type TailorResult = {
   matchNotes: string[];
   tailoredResume: string;
   coverLetter: string;
+  fitScore: number;
+  fitLabel: string;
+  fitWarning: string | null;
 };
