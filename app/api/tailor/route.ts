@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
 
-    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -61,3 +61,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "We couldn't tailor your documents right now. Please try again." }, { status: 500 });
   }
 }
+
