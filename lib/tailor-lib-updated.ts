@@ -16,11 +16,25 @@ export function localTailor(resume: string, job: string): TailorResult {
     return `• ${clean.charAt(0).toUpperCase()}${clean.slice(1)}.`;
   });
   const jobTitle = job.match(/(?:job title|position|role)\s*[:\-]\s*([^\n]+)/i)?.[1]?.trim() || "this role";
+
+  // Rough fit score: what fraction of the top job-description keywords
+  // actually appear somewhere in the resume text.
+  const resumeLower = resume.toLowerCase();
+  const matched = skills.filter(s => resumeLower.includes(s.toLowerCase()));
+  const fitScore = skills.length ? Math.round((matched.length / skills.length) * 100) : 50;
+  const fitLabel = fitScore >= 70  ? "Strong match" : fitScore >= 40 ? "Reasonable match" : "Significant gaps";
+  const fitWarning = fitScore < 40
+    ? `Your resume matches only ${matched.length} of the ${skills.length} key terms found in this job description — review whether this role is the right target before applying.`
+    : null;
+
   return {
     jobTitle,
     keySkills: skills,
     matchNotes: skills.slice(0,4).map(s => resume.toLowerCase().includes(s.toLowerCase()) ? `${s} is already supported by your resume.` : `${s} appears important; add it only if your real experience supports it.`),
     tailoredResume: `PROFESSIONAL SUMMARY\n${summarySource}\n\nSELECTED EXPERIENCE\n${bullets.join("\n") || lines.join("\n")}`,
-    coverLetter: `Dear Hiring Manager,\n\nI am writing to express my interest in ${jobTitle}. My background, as outlined in my resume, includes experience relevant to ${skills.slice(0,4).join(", ")}. I would welcome the opportunity to bring these strengths to your team.\n\nThroughout my experience, I have focused on delivering dependable work, collaborating effectively, and building practical skills that align with the needs described in this position. I am particularly drawn to the opportunity to contribute while continuing to grow in the role.\n\nThank you for considering my application. I would be pleased to discuss how my experience could support your team’s goals.\n\nSincerely,\n[Your name]`
+    coverLetter: `Dear Hiring Manager,\n\nI am writing to express my interest in ${jobTitle}. My background, as outlined in my resume, includes experience relevant to ${skills.slice(0,4).join(", ")}. I would welcome the opportunity to bring these strengths to your team.\n\nThroughout my experience, I have focused on delivering dependable work, collaborating effectively, and building practical skills that align with the needs described in this position. I am particularly drawn to the opportunity to contribute while continuing to grow in the role.\n\nThank you for considering my application. I would be pleased to discuss how my experience could support your team’s goals.\n\nSincerely,\n[Your name]`,
+    fitScore,
+    fitLabel,
+    fitWarning
   };
 }
