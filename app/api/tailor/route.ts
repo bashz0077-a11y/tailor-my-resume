@@ -12,18 +12,52 @@ export async function POST(request: Request) {
     if (!resume?.trim() || !jobDescription?.trim()) return NextResponse.json({ error: "Add both your resume and the job description." }, { status: 400 });
     if (resume.length > 30000 || jobDescription.length > 20000) return NextResponse.json({ error: "The text is too long. Please shorten it and try again." }, { status: 413 });
 
-    if (!process.env.OPENAI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
+    if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4.1-mini", response_format: { type: "json_object" }, temperature: 0.25, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `RESUME:\n${resume}\n\nJOB DESCRIPTION:\n${jobDescription}` }] })
-    });
-    if (!response.ok) throw new Error("AI service error");
+    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `${systemPrompt}\n\nRESUME:\n${resume}\n\nJOB DESCRIPTION:\n${jobDescription}\n\nRespond with ONLY the JSON object, no markdown fences, no extra text.`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.25,
+            responseMimeType: "application/json"
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Gemini API error:", errText);
+      throw new Error("AI service error");
+    }
+
     const payload = await response.json();
-    const result = JSON.parse(payload.choices[0].message.content) as TailorResult;
+    let raw = payload.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
+    // Safety net in case the model still wraps the JSON in markdown fences
+    raw = raw.trim();
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/```\s*$/, "");
+    }
+
+    const result = JSON.parse(raw) as TailorResult;
     return NextResponse.json(result);
-  } catch {
+  } catch (e) {
+    console.error("Tailor route error:", e);
     return NextResponse.json({ error: "We couldn't tailor your documents right now. Please try again." }, { status: 500 });
   }
 }
