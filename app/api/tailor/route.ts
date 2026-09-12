@@ -1,4 +1,4 @@
-    import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { localTailor } from "@/lib/tailor";
 import type { TailorResult } from "@/lib/types";
 
@@ -73,7 +73,7 @@ JOB DESCRIPTION:
 ${job}`;
 
 async function callGemini(prompt: string) {
-  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3-flash";
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
