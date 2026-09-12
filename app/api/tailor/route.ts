@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+    import { NextResponse } from "next/server";
 import { localTailor } from "@/lib/tailor";
 import type { TailorResult } from "@/lib/types";
 
 export const runtime = "nodejs";
+// Vercel default function timeout is too short for multiple sequential
+// AI calls (scoring + generation + rescoring, possibly x3 with retries).
+// This raises the ceiling so a full retry cycle can actually finish.
+export const maxDuration = 60;
 
 /* ────────────────────────────────────────────────────────────────────────
    ARCHITECTURE NOTE (read this before touching the logic below)
@@ -128,19 +132,26 @@ export async function POST(request: Request) {
 
     if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
 
-    // STEP 1: score the untouched original resume. This is the baseline
-    // every candidate rewrite must match or beat - it never changes
-    // during retries, because it's always computed from `resume`
-    // (the original request body), never from a generated draft.
-    const originalScore = await scoreResume(resume, jobDescription);
+    // STEP 1: score the untouched original resume, IN PARALLEL with
+    // generating the first candidate. These two calls don't depend on
+    // each other's output, so running them together roughly halves
+    // the time spent on the first attempt.
+    const MAX_RETRIES = 1; // 2 attempts total - kept low to stay well
+                            // inside Vercel's function time limit.
+    const [originalScore, firstCandidate] = await Promise.all([
+      scoreResume(resume, jobDescription),
+      generateCandidate(resume, jobDescription)
+    ]);
 
     let best: { gen: GenResult; score: ScoreResult } | null = null;
-    const MAX_RETRIES = 2; // 3 attempts total, per spec
+    let candidate = firstCandidate;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      // Always regenerate from the ORIGINAL resume - never from a
-      // previous candidate - so quality can't drift across retries.
-      const candidate = await generateCandidate(resume, jobDescription);
+      if (attempt > 0) {
+        // Only regenerate on retry - always from the ORIGINAL resume,
+        // never from a previous candidate, so quality can't drift.
+        candidate = await generateCandidate(resume, jobDescription);
+      }
       const candidateScore = await scoreResume(candidate.tailoredResume, jobDescription);
 
       console.log(`[tailor] attempt ${attempt + 1}: candidate score ${candidateScore.fitScore} vs original ${originalScore.fitScore}`);
