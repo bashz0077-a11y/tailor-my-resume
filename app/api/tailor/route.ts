@@ -4,21 +4,121 @@ import type { TailorResult } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const systemPrompt = `You are an ethical career editor. Tailor a resume to a job description using ONLY facts already present in the resume. Never invent experience, employers, dates, education, tools, metrics, or achievements. Rephrase and reprioritize honestly.
+/* ────────────────────────────────────────────────────────────────────────
+   ARCHITECTURE NOTE (read this before touching the logic below)
 
-You must also honestly assess how well this candidate actually fits the role, even if that means telling them it's a poor fit. Do not soften this assessment to be encouraging - the candidate needs accurate information, not false hope.
+   The old version asked Gemini to score AND rewrite the resume in a
+   single call. That meant every regeneration produced new wording,
+   and scoring THAT new wording gave a different score every time -
+   the score and the text were never independently comparable.
 
-Return valid JSON with exactly these fields:
-- jobTitle (string)
-- keySkills (string array): skills from the resume that are genuinely relevant to this job
-- matchNotes (string array): honest notes on what matches and what's missing
-- tailoredResume (plain text with headings and bullets)
-- coverLetter (plain text)
-- fitScore (number 0-100): your honest estimate of how well this candidate's ACTUAL experience matches the role's core requirements. A recent bootcamp grad applying to a role requiring 3+ years professional experience should score low (10-30), not be inflated to seem encouraging. A candidate missing one or two nice-to-have skills but meeting the core requirements should score high (70-90). Be realistic, not generous.
-- fitLabel (string): a short 2-4 word label matching the score, e.g. "Strong match", "Reasonable match", "Significant gaps", "Poor fit for this role"
-- fitWarning (string or null): if fitScore is below 40, write ONE direct, honest sentence telling the candidate this role is a stretch and why, without discouraging them from growing toward it. If fitScore is 40 or above, set this to null.
+   This version splits the two concerns:
 
-Rephrase and reprioritize honestly. If a requirement is absent, mention the gap in matchNotes; do not add it to the resume as experience.`;
+     scoreResume()    - scores a given block of resume text against the
+                         job description. Nothing else. Called with
+                         temperature 0, so the same text + same job
+                         always produces the same score.
+
+     generateCandidate() - takes the ORIGINAL resume (never a previous
+                         AI output) and produces ONE tailored rewrite.
+                         Also temperature 0.
+
+   The POST handler below is the only place that combines them:
+   it always scores the untouched original resume first (the
+   "source of truth" baseline), then generates a candidate rewrite,
+   scores that candidate's resume text with the exact same scorer,
+   and only keeps the candidate if it scores at or above the
+   original. If not, it retries (max 2 retries = 3 attempts total)
+   before falling back to the best truthful candidate produced, or
+   the original text itself if nothing beat it - so the user is
+   never handed a worse-scoring rewrite than what they started with.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const SCORE_PROMPT = (resume: string, job: string) => `You are an ethical, realistic hiring evaluator. Score how well this resume ACTUALLY matches this job description. Do not be encouraging or generous - a candidate missing core requirements should score low.
+
+Return ONLY this JSON:
+{
+  "fitScore": number 0-100,
+  "fitLabel": "2-4 word label, e.g. 'Strong match' / 'Reasonable match' / 'Significant gaps' / 'Poor fit for this role'",
+  "fitWarning": "one direct honest sentence if fitScore < 40, otherwise null",
+  "keySkills": ["skills from the resume genuinely relevant to this job"],
+  "matchNotes": ["honest notes on what matches and what's missing"]
+}
+
+RESUME:
+${resume}
+
+JOB DESCRIPTION:
+${job}`;
+
+const GENERATE_PROMPT = (resume: string, job: string) => `You are an ethical career editor. Rewrite this resume to better present it for the job below, using ONLY facts already present in the resume. Never invent experience, employers, dates, education, tools, metrics, or achievements - only rephrase, reprioritize, and reorganize what's actually there. Naturally incorporate the job description's real terminology only where the resume's own content genuinely supports it. Do not keyword-stuff.
+
+Also write a matching, honest cover letter from the same facts.
+
+Return ONLY this JSON:
+{
+  "jobTitle": "the job title from the posting",
+  "tailoredResume": "plain text with headings and bullets",
+  "coverLetter": "plain text"
+}
+
+ORIGINAL RESUME (this is the only source of truth - do not carry over wording from any other draft):
+${resume}
+
+JOB DESCRIPTION:
+${job}`;
+
+async function callGemini(prompt: string) {
+  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        // temperature 0: deterministic output for the same input,
+        // required so scoring is stable and regeneration doesn't drift.
+        generationConfig: { temperature: 0, responseMimeType: "application/json" }
+      })
+    }
+  );
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Gemini API error:", errText);
+    throw new Error("AI service error");
+  }
+  const payload = await response.json();
+  let raw = payload.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  raw = raw.trim();
+  if (raw.startsWith("```")) {
+    raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/```\s*$/, "");
+  }
+  return JSON.parse(raw);
+}
+
+type ScoreResult = { fitScore: number; fitLabel: string; fitWarning: string | null; keySkills: string[]; matchNotes: string[] };
+type GenResult = { jobTitle: string; tailoredResume: string; coverLetter: string };
+
+async function scoreResume(resume: string, job: string): Promise<ScoreResult> {
+  const r = await callGemini(SCORE_PROMPT(resume, job));
+  return {
+    fitScore: typeof r.fitScore === "number" ? r.fitScore : 50,
+    fitLabel: r.fitLabel || "Fit unclear",
+    fitWarning: r.fitScore >= 40 ? null : (r.fitWarning || null),
+    keySkills: Array.isArray(r.keySkills) ? r.keySkills : [],
+    matchNotes: Array.isArray(r.matchNotes) ? r.matchNotes : []
+  };
+}
+
+async function generateCandidate(originalResume: string, job: string): Promise<GenResult> {
+  const r = await callGemini(GENERATE_PROMPT(originalResume, job));
+  return {
+    jobTitle: r.jobTitle || "this role",
+    tailoredResume: r.tailoredResume || originalResume,
+    coverLetter: r.coverLetter || ""
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,51 +128,52 @@ export async function POST(request: Request) {
 
     if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
 
-    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `${systemPrompt}\n\nRESUME:\n${resume}\n\nJOB DESCRIPTION:\n${jobDescription}\n\nRespond with ONLY the JSON object, no markdown fences, no extra text.`
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0,
-            responseMimeType: "application/json"
-          }
-        })
+    // STEP 1: score the untouched original resume. This is the baseline
+    // every candidate rewrite must match or beat - it never changes
+    // during retries, because it's always computed from `resume`
+    // (the original request body), never from a generated draft.
+    const originalScore = await scoreResume(resume, jobDescription);
+
+    let best: { gen: GenResult; score: ScoreResult } | null = null;
+    const MAX_RETRIES = 2; // 3 attempts total, per spec
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      // Always regenerate from the ORIGINAL resume - never from a
+      // previous candidate - so quality can't drift across retries.
+      const candidate = await generateCandidate(resume, jobDescription);
+      const candidateScore = await scoreResume(candidate.tailoredResume, jobDescription);
+
+      console.log(`[tailor] attempt ${attempt + 1}: candidate score ${candidateScore.fitScore} vs original ${originalScore.fitScore}`);
+
+      if (!best || candidateScore.fitScore > best.score.fitScore) {
+        best = { gen: candidate, score: candidateScore };
       }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Gemini API error:", errText);
-      throw new Error("AI service error");
+      if (candidateScore.fitScore >= originalScore.fitScore) {
+        break; // good enough - accept immediately, no need to burn more retries
+      }
     }
 
-    const payload = await response.json();
-    let raw = payload.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    // If nothing beat the original, don't hand back a worse rewrite.
+    // Fall back to the original resume text itself (still truthful,
+    // still guaranteed to carry the original's own score).
+    const finalUsesOriginal = !best || best.score.fitScore < originalScore.fitScore;
+    const finalResumeText = finalUsesOriginal ? resume : best!.gen.tailoredResume;
+    const finalScore = finalUsesOriginal ? originalScore : best!.score;
+    const finalCoverLetter = finalUsesOriginal
+      ? (best?.gen.coverLetter || "")
+      : best!.gen.coverLetter;
+    const finalJobTitle = best?.gen.jobTitle || "this role";
 
-    raw = raw.trim();
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/```\s*$/, "");
-    }
-
-    const result = JSON.parse(raw) as TailorResult;
-
-    // Safety net: if the model omitted fit fields, don't crash the UI
-    if (typeof result.fitScore !== "number") result.fitScore = 50;
-    if (!result.fitLabel) result.fitLabel = "Fit unclear";
-    if (result.fitScore >= 40) result.fitWarning = null;
+    const result: TailorResult = {
+      jobTitle: finalJobTitle,
+      keySkills: finalScore.keySkills,
+      matchNotes: finalScore.matchNotes,
+      tailoredResume: finalResumeText,
+      coverLetter: finalCoverLetter,
+      fitScore: finalScore.fitScore,
+      fitLabel: finalScore.fitLabel,
+      fitWarning: finalScore.fitWarning
+    };
 
     return NextResponse.json(result);
   } catch (e) {
