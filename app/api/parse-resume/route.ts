@@ -14,7 +14,8 @@ const pdf = (await import("pdf-parse/lib/pdf-parse.js")).default;
     const parsed = await pdf(Buffer.from(await file.arrayBuffer()));
     if (!parsed.text.trim()) return NextResponse.json({ error: "We couldn't find readable text in this PDF. Try pasting your resume instead." }, { status: 422 });
     return NextResponse.json({ text: parsed.text.trim() });
-  } catch {
+  } catch (err) {
+    console.error("Parse resume error:", err);
     return NextResponse.json({ error: "We couldn't read that PDF. Try another file or paste the text." }, { status: 500 });
   }
 }
