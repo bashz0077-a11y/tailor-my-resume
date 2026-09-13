@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X } from "lucide-react";
+import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { ResumeData, WorkExperience, EducationEntry } from "@/lib/types";
 
 const STEPS = ["Personal", "Experience", "Education", "Skills", "Preview"];
@@ -36,6 +37,7 @@ const inputCls = "focus-ring w-full rounded-xl border border-[#dfd4e1] bg-white 
 const labelCls = "mb-1.5 block text-sm font-bold text-[#4a354f]";
 
 export default function ResumeBuilder() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<ResumeData>({
     fullName: "", jobTitle: "", email: "", phone: "", location: "", linkedin: "", website: "",
@@ -163,7 +165,8 @@ export default function ResumeBuilder() {
           <h2 className="mb-4 text-xl font-extrabold">Preview</h2>
           <pre className="max-h-[500px] overflow-auto whitespace-pre-wrap rounded-2xl border border-[#dfd4e1] bg-[#fcfafc] p-5 font-sans text-[15px] leading-7 text-[#3c2842]">{resumeToText(data)}</pre>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <button onClick={downloadPdf} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#52205f] px-6 py-3.5 font-extrabold text-white"><Download size={17}/>Download PDF</button>
+            <button onClick={downloadPdf} className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-[#52205f] px-6 py-3.5 font-extrabold text-[#52205f]"><Download size={17}/>Download PDF</button>
+            <button onClick={()=>{sessionStorage.setItem("tmr-prefill-resume", resumeToText(data)); router.push("/tailor");}} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#52205f] px-6 py-3.5 font-extrabold text-white"><Sparkles size={17}/>Tailor this resume</button>
           </div>
         </div>}
 
