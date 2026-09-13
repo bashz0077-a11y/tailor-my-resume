@@ -9,7 +9,7 @@ export type TailorResult = {
   fitWarning: string | null;
 };
 
-  export type WorkExperience = {
+export type WorkExperience = {
   id: string;
   jobTitle: string;
   company: string;
@@ -30,6 +30,27 @@ export type EducationEntry = {
   description: string;
 };
 
+export type ProjectEntry = {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string;
+  link: string;
+};
+
+export type CertificationEntry = {
+  id: string;
+  name: string;
+  issuer: string;
+  year: string;
+};
+
+export type LanguageEntry = {
+  id: string;
+  name: string;
+  level: string;
+};
+
 export type ResumeData = {
   fullName: string;
   jobTitle: string;
@@ -42,4 +63,7 @@ export type ResumeData = {
   experience: WorkExperience[];
   education: EducationEntry[];
   skills: string[];
+  projects: ProjectEntry[];
+  certifications: CertificationEntry[];
+  languages: LanguageEntry[];
 };
