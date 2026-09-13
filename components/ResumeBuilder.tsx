@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles } from "lucide-react";
+import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles, User, Briefcase, GraduationCap, ListChecks, FolderKanban, Award, Languages as LangIcon, Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 import type { ResumeData, WorkExperience, EducationEntry, ProjectEntry, CertificationEntry, LanguageEntry } from "@/lib/types";
 
 const STEPS = ["Personal", "Experience", "Education", "Skills", "Additional", "Preview"];
@@ -57,6 +57,85 @@ function resumeToText(d: ResumeData) {
 const inputCls = "focus-ring w-full rounded-xl border border-[#dfd4e1] bg-white p-3 text-base placeholder:text-[#aa9fae]";
 const labelCls = "mb-1.5 block text-sm font-bold text-[#4a354f]";
 
+function SectionHeading({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
+  return <div className="mb-5 flex items-center gap-3">
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f0e7f2] text-[#52205f]">{icon}</span>
+    <div><h2 className="text-xl font-extrabold text-[#28122f]">{title}</h2>{hint && <p className="text-sm text-[#8a798e]">{hint}</p>}</div>
+  </div>;
+}
+
+function ResumePreview({ d }: { d: ResumeData }) {
+  return <div className="rounded-2xl border border-[#dfd4e1] bg-white p-6 sm:p-9 shadow-soft">
+    <div className="border-b-2 border-[#52205f] pb-5 mb-6">
+      <h1 className="text-3xl font-extrabold tracking-tight text-[#28122f]">{d.fullName || "Your Name"}</h1>
+      {d.jobTitle && <p className="mt-1 text-lg font-semibold text-[#8b499f]">{d.jobTitle}</p>}
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#5c4d60]">
+        {d.email && <span className="flex items-center gap-1.5"><Mail size={13}/>{d.email}</span>}
+        {d.phone && <span className="flex items-center gap-1.5"><Phone size={13}/>{d.phone}</span>}
+        {d.location && <span className="flex items-center gap-1.5"><MapPin size={13}/>{d.location}</span>}
+        {d.linkedin && <span className="flex items-center gap-1.5"><Linkedin size={13}/>{d.linkedin}</span>}
+        {d.website && <span className="flex items-center gap-1.5"><Globe size={13}/>{d.website}</span>}
+      </div>
+    </div>
+
+    {d.summary.trim() && <div className="mb-6"><p className="text-[15px] leading-7 text-[#3c2842]">{d.summary}</p></div>}
+
+    {d.experience.length > 0 && <div className="mb-6">
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Experience</h3>
+      <div className="space-y-4">
+        {d.experience.map(e => <div key={e.id}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <p className="font-bold text-[#28122f]">{e.jobTitle}{e.company && <span className="font-medium text-[#5c4d60]"> — {e.company}</span>}</p>
+            <p className="text-sm text-[#8a798e]">{e.startDate}{(e.startDate || e.endDate || e.current) && " – "}{e.current ? "Present" : e.endDate}</p>
+          </div>
+          {e.location && <p className="text-sm text-[#8a798e]">{e.location}</p>}
+          {e.bullets.filter(b=>b.trim()).length > 0 && <ul className="mt-1.5 space-y-1 pl-4">{e.bullets.filter(b=>b.trim()).map((b,i) => <li key={i} className="list-disc text-[15px] leading-6 text-[#3c2842]">{b}</li>)}</ul>}
+        </div>)}
+      </div>
+    </div>}
+
+    {d.education.length > 0 && <div className="mb-6">
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Education</h3>
+      <div className="space-y-3">
+        {d.education.map(ed => <div key={ed.id}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <p className="font-bold text-[#28122f]">{ed.degree}</p>
+            <p className="text-sm text-[#8a798e]">{ed.startYear}{(ed.startYear || ed.endYear) && " – "}{ed.endYear}</p>
+          </div>
+          <p className="text-sm text-[#5c4d60]">{ed.institution}{ed.location && `, ${ed.location}`}</p>
+          {ed.description.trim() && <p className="mt-1 text-sm leading-6 text-[#3c2842]">{ed.description}</p>}
+        </div>)}
+      </div>
+    </div>}
+
+    {d.skills.length > 0 && <div className="mb-6">
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Skills</h3>
+      <div className="flex flex-wrap gap-2">{d.skills.map(s => <span key={s} className="rounded-full bg-[#f0e7f2] px-3 py-1 text-sm font-semibold text-[#52205f]">{s}</span>)}</div>
+    </div>}
+
+    {d.projects.length > 0 && <div className="mb-6">
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Projects</h3>
+      <div className="space-y-3">
+        {d.projects.map(p => <div key={p.id}>
+          <p className="font-bold text-[#28122f]">{p.name}{p.technologies && <span className="font-medium text-[#8a798e]"> — {p.technologies}</span>}</p>
+          {p.description.trim() && <p className="text-sm leading-6 text-[#3c2842]">{p.description}</p>}
+          {p.link.trim() && <p className="text-sm text-[#8b499f]">{p.link}</p>}
+        </div>)}
+      </div>
+    </div>}
+
+    {d.certifications.length > 0 && <div className="mb-6">
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Certifications</h3>
+      <div className="space-y-1">{d.certifications.map(c => <p key={c.id} className="text-[15px] text-[#3c2842]"><span className="font-bold">{c.name}</span>{c.issuer && `, ${c.issuer}`}{c.year && ` (${c.year})`}</p>)}</div>
+    </div>}
+
+    {d.languages.length > 0 && <div>
+      <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[.15em] text-[#52205f]">Languages</h3>
+      <p className="text-[15px] text-[#3c2842]">{d.languages.map(l => `${l.name}${l.level ? " (" + l.level + ")" : ""}`).join("  •  ")}</p>
+    </div>}
+  </div>;
+}
+
 export default function ResumeBuilder() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -77,10 +156,66 @@ export default function ResumeBuilder() {
   }
 
   async function downloadPdf() {
-    const { pdf, Document, Page, Text, StyleSheet } = await import("@react-pdf/renderer");
-    const styles = StyleSheet.create({ page: { padding: 50, fontFamily: "Helvetica", fontSize: 10.5, lineHeight: 1.55, color: "#25162c" }, title: { fontSize: 18, fontFamily: "Helvetica-Bold", marginBottom: 18, color: "#6d347f" }, text: { whiteSpace: "pre-wrap" } });
-    const text = resumeToText(data);
-    const doc = <Document><Page size="A4" style={styles.page}><Text style={styles.title}>{data.fullName || "Resume"}</Text><Text style={styles.text}>{text}</Text></Page></Document>;
+    const { pdf, Document, Page, Text, View, StyleSheet } = await import("@react-pdf/renderer");
+    const c = { ink: "#25162c", accent: "#6d347f", sub: "#6b5a70" };
+    const s = StyleSheet.create({
+      page: { padding: 42, fontFamily: "Helvetica", fontSize: 10, lineHeight: 1.45, color: c.ink },
+      name: { fontSize: 22, fontFamily: "Helvetica-Bold", color: c.ink },
+      title: { fontSize: 12, fontFamily: "Helvetica-Bold", color: c.accent, marginTop: 2 },
+      contactRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 8, marginBottom: 12, fontSize: 9, color: c.sub },
+      hr: { borderBottomWidth: 1.5, borderBottomColor: c.accent, marginBottom: 14 },
+      sectionTitle: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: c.accent, marginBottom: 6, marginTop: 12, letterSpacing: 1 },
+      row: { flexDirection: "row", justifyContent: "space-between" },
+      bold: { fontFamily: "Helvetica-Bold" },
+      dim: { color: c.sub, fontSize: 9 },
+      bullet: { flexDirection: "row", marginTop: 2, paddingLeft: 4 },
+      bulletDot: { width: 10 },
+      para: { marginTop: 3 },
+      block: { marginBottom: 8 },
+    });
+    const contact = [data.email, data.phone, data.location, data.linkedin, data.website].filter(Boolean);
+    const doc = <Document>
+      <Page size="A4" style={s.page}>
+        <Text style={s.name}>{data.fullName || "Your Name"}</Text>
+        {!!data.jobTitle && <Text style={s.title}>{data.jobTitle}</Text>}
+        {contact.length > 0 && <View style={s.contactRow}>{contact.map((cc, i) => <Text key={i}>{cc}</Text>)}</View>}
+        <View style={s.hr} />
+        {data.summary.trim() && <View style={s.block}><Text>{data.summary}</Text></View>}
+        {data.experience.length > 0 && <View>
+          <Text style={s.sectionTitle}>EXPERIENCE</Text>
+          {data.experience.map(e => <View key={e.id} style={s.block}>
+            <View style={s.row}><Text style={s.bold}>{e.jobTitle}{e.company ? ` — ${e.company}` : ""}</Text><Text style={s.dim}>{e.startDate}{(e.startDate || e.endDate || e.current) ? " - " : ""}{e.current ? "Present" : e.endDate}</Text></View>
+            {!!e.location && <Text style={s.dim}>{e.location}</Text>}
+            {e.bullets.filter(b => b.trim()).map((b, i) => <View key={i} style={s.bullet}><Text style={s.bulletDot}>•</Text><Text>{b}</Text></View>)}
+          </View>)}
+        </View>}
+        {data.education.length > 0 && <View>
+          <Text style={s.sectionTitle}>EDUCATION</Text>
+          {data.education.map(ed => <View key={ed.id} style={s.block}>
+            <View style={s.row}><Text style={s.bold}>{ed.degree}</Text><Text style={s.dim}>{ed.startYear}{(ed.startYear || ed.endYear) ? " - " : ""}{ed.endYear}</Text></View>
+            <Text style={s.dim}>{ed.institution}{ed.location ? `, ${ed.location}` : ""}</Text>
+            {!!ed.description.trim() && <Text style={s.para}>{ed.description}</Text>}
+          </View>)}
+        </View>}
+        {data.skills.length > 0 && <View><Text style={s.sectionTitle}>SKILLS</Text><Text>{data.skills.join("   •   ")}</Text></View>}
+        {data.projects.length > 0 && <View>
+          <Text style={s.sectionTitle}>PROJECTS</Text>
+          {data.projects.map(p => <View key={p.id} style={s.block}>
+            <Text style={s.bold}>{p.name}{p.technologies ? ` — ${p.technologies}` : ""}</Text>
+            {!!p.description.trim() && <Text style={s.para}>{p.description}</Text>}
+            {!!p.link.trim() && <Text style={[s.para, s.dim]}>{p.link}</Text>}
+          </View>)}
+        </View>}
+        {data.certifications.length > 0 && <View>
+          <Text style={s.sectionTitle}>CERTIFICATIONS</Text>
+          {data.certifications.map(cert => <Text key={cert.id} style={s.para}><Text style={s.bold}>{cert.name}</Text>{cert.issuer ? `, ${cert.issuer}` : ""}{cert.year ? ` (${cert.year})` : ""}</Text>)}
+        </View>}
+        {data.languages.length > 0 && <View>
+          <Text style={s.sectionTitle}>LANGUAGES</Text>
+          <Text>{data.languages.map(l => `${l.name}${l.level ? " (" + l.level + ")" : ""}`).join("   •   ")}</Text>
+        </View>}
+      </Page>
+    </Document>;
     const blob = await pdf(doc).toBlob();
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${(data.fullName || "resume").toLowerCase().replace(/\s+/g, "-")}.pdf`; a.click(); URL.revokeObjectURL(url);
   }
@@ -91,14 +226,14 @@ export default function ResumeBuilder() {
     </header>
 
     <main className="mx-auto max-w-3xl px-5 pb-24">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between overflow-x-auto">
         {STEPS.map((s, i) => (
-          <div key={s} className="flex flex-1 items-center">
+          <div key={s} className="flex flex-1 items-center min-w-[52px]">
             <div className="flex flex-col items-center gap-1.5">
-              <div className={`grid h-8 w-8 place-items-center rounded-full text-sm font-extrabold ${i <= step ? "bg-[#52205f] text-white" : "bg-[#eee8ef] text-[#a695ab]"}`}>{i + 1}</div>
+              <div className={`grid h-8 w-8 place-items-center rounded-full text-sm font-extrabold transition ${i <= step ? "bg-[#52205f] text-white" : "bg-[#eee8ef] text-[#a695ab]"}`}>{i + 1}</div>
               <span className={`text-xs font-bold ${i <= step ? "text-[#52205f]" : "text-[#a695ab]"}`}>{s}</span>
             </div>
-            {i < STEPS.length - 1 && <div className={`mx-2 h-0.5 flex-1 ${i < step ? "bg-[#52205f]" : "bg-[#eee8ef]"}`}/>}
+            {i < STEPS.length - 1 && <div className={`mx-2 h-0.5 flex-1 transition ${i < step ? "bg-[#52205f]" : "bg-[#eee8ef]"}`}/>}
           </div>
         ))}
       </div>
@@ -106,7 +241,7 @@ export default function ResumeBuilder() {
       <div className="rounded-3xl border border-[#e3d9e6] bg-white p-5 shadow-soft sm:p-8">
 
         {step === 0 && <div className="space-y-4">
-          <h2 className="mb-2 text-xl font-extrabold">Personal Details</h2>
+          <SectionHeading icon={<User size={19}/>} title="Personal Details" hint="How employers will identify and reach you" />
           <div><label className={labelCls}>Full name</label><input className={inputCls} value={data.fullName} onChange={e=>update("fullName", e.target.value)} placeholder="Jordan Lee"/></div>
           <div><label className={labelCls}>Professional title</label><input className={inputCls} value={data.jobTitle} onChange={e=>update("jobTitle", e.target.value)} placeholder="Senior Frontend Engineer"/></div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -122,7 +257,7 @@ export default function ResumeBuilder() {
         </div>}
 
         {step === 1 && <div className="space-y-5">
-          <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Work Experience</h2><button onClick={()=>update("experience", [...data.experience, emptyExp()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+          <div className="flex items-center justify-between"><SectionHeading icon={<Briefcase size={19}/>} title="Work Experience" hint="Most recent role first" /><button onClick={()=>update("experience", [...data.experience, emptyExp()])} className="flex h-fit items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
           {data.experience.length === 0 && <p className="text-sm text-[#8a798e]">No experience added yet. Tap "Add" to include a job.</p>}
           {data.experience.map((exp, i) => (
             <div key={exp.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
@@ -152,7 +287,7 @@ export default function ResumeBuilder() {
         </div>}
 
         {step === 2 && <div className="space-y-5">
-          <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Education</h2><button onClick={()=>update("education", [...data.education, emptyEdu()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+          <div className="flex items-center justify-between"><SectionHeading icon={<GraduationCap size={19}/>} title="Education" /><button onClick={()=>update("education", [...data.education, emptyEdu()])} className="flex h-fit items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
           {data.education.length === 0 && <p className="text-sm text-[#8a798e]">No education added yet.</p>}
           {data.education.map((ed, i) => (
             <div key={ed.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
@@ -172,7 +307,7 @@ export default function ResumeBuilder() {
         </div>}
 
         {step === 3 && <div>
-          <h2 className="mb-4 text-xl font-extrabold">Skills</h2>
+          <SectionHeading icon={<ListChecks size={19}/>} title="Skills" />
           <div className="flex gap-2">
             <input className={inputCls} value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"||e.key===","){e.preventDefault(); addSkill();}}} placeholder="Type a skill and press Enter"/>
             <button onClick={addSkill} className="rounded-xl bg-[#52205f] px-5 font-bold text-white">Add</button>
@@ -182,9 +317,9 @@ export default function ResumeBuilder() {
           </div>
         </div>}
 
-        {step === 4 && <div className="space-y-8">
+        {step === 4 && <div className="space-y-9">
           <div className="space-y-5">
-            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Projects <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("projects", [...data.projects, emptyProject()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            <div className="flex items-center justify-between"><SectionHeading icon={<FolderKanban size={19}/>} title="Projects" hint="Optional" /><button onClick={()=>update("projects", [...data.projects, emptyProject()])} className="flex h-fit items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
             {data.projects.map((p, i) => (
               <div key={p.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
                 <div className="flex justify-end"><button onClick={()=>update("projects", data.projects.filter(x=>x.id!==p.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button></div>
@@ -197,7 +332,7 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="space-y-5">
-            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Certifications <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("certifications", [...data.certifications, emptyCert()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            <div className="flex items-center justify-between"><SectionHeading icon={<Award size={19}/>} title="Certifications" hint="Optional" /><button onClick={()=>update("certifications", [...data.certifications, emptyCert()])} className="flex h-fit items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
             {data.certifications.map((c, i) => (
               <div key={c.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
                 <div className="flex justify-end"><button onClick={()=>update("certifications", data.certifications.filter(x=>x.id!==c.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button></div>
@@ -211,7 +346,7 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="space-y-5">
-            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Languages <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("languages", [...data.languages, emptyLang()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            <div className="flex items-center justify-between"><SectionHeading icon={<LangIcon size={19}/>} title="Languages" hint="Optional" /><button onClick={()=>update("languages", [...data.languages, emptyLang()])} className="flex h-fit items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
             {data.languages.map((l, i) => (
               <div key={l.id} className="flex gap-3">
                 <input className={inputCls} value={l.name} onChange={e=>{const n=[...data.languages]; n[i]={...l, name:e.target.value}; update("languages", n);}} placeholder="Language"/>
@@ -223,8 +358,8 @@ export default function ResumeBuilder() {
         </div>}
 
         {step === 5 && <div>
-          <h2 className="mb-4 text-xl font-extrabold">Preview</h2>
-          <pre className="max-h-[500px] overflow-auto whitespace-pre-wrap rounded-2xl border border-[#dfd4e1] bg-[#fcfafc] p-5 font-sans text-[15px] leading-7 text-[#3c2842]">{resumeToText(data)}</pre>
+          <SectionHeading icon={<Sparkles size={19}/>} title="Preview" hint="This is how your resume will look" />
+          <ResumePreview d={data} />
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button onClick={downloadPdf} className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-[#52205f] px-6 py-3.5 font-extrabold text-[#52205f]"><Download size={17}/>Download PDF</button>
             <button onClick={()=>{sessionStorage.setItem("tmr-prefill-resume", resumeToText(data)); router.push("/tailor");}} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#52205f] px-6 py-3.5 font-extrabold text-white"><Sparkles size={17}/>Tailor this resume</button>
@@ -238,4 +373,4 @@ export default function ResumeBuilder() {
       </div>
     </main>
   </>;
-}
+                                                                        }
