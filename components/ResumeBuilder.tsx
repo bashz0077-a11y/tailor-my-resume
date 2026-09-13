@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
-import type { ResumeData, WorkExperience, EducationEntry } from "@/lib/types";
+import type { ResumeData, WorkExperience, EducationEntry, ProjectEntry, CertificationEntry, LanguageEntry } from "@/lib/types";
 
-const STEPS = ["Personal", "Experience", "Education", "Skills", "Preview"];
+const STEPS = ["Personal", "Experience", "Education", "Skills", "Additional", "Preview"];
 const emptyExp = (): WorkExperience => ({ id: crypto.randomUUID(), jobTitle: "", company: "", location: "", startDate: "", endDate: "", current: false, bullets: [""] });
 const emptyEdu = (): EducationEntry => ({ id: crypto.randomUUID(), degree: "", institution: "", location: "", startYear: "", endYear: "", description: "" });
+const emptyProject = (): ProjectEntry => ({ id: crypto.randomUUID(), name: "", description: "", technologies: "", link: "" });
+const emptyCert = (): CertificationEntry => ({ id: crypto.randomUUID(), name: "", issuer: "", year: "" });
+const emptyLang = (): LanguageEntry => ({ id: crypto.randomUUID(), name: "", level: "" });
 
 function resumeToText(d: ResumeData) {
   let out = `${d.fullName}\n${d.jobTitle}\n${[d.email, d.phone, d.location].filter(Boolean).join(" | ")}\n${[d.linkedin, d.website].filter(Boolean).join(" | ")}\n\n`;
@@ -29,7 +32,25 @@ function resumeToText(d: ResumeData) {
       out += "\n";
     }
   }
-  if (d.skills.length) out += `SKILLS\n${d.skills.join(", ")}\n`;
+  if (d.skills.length) out += `SKILLS\n${d.skills.join(", ")}\n\n`;
+  if (d.projects.length) {
+    out += "PROJECTS\n";
+    for (const p of d.projects) {
+      out += `${p.name}${p.technologies ? " — " + p.technologies : ""}\n`;
+      if (p.description.trim()) out += `${p.description}\n`;
+      if (p.link.trim()) out += `${p.link}\n`;
+      out += "\n";
+    }
+  }
+  if (d.certifications.length) {
+    out += "CERTIFICATIONS\n";
+    for (const c of d.certifications) out += `${c.name}${c.issuer ? ", " + c.issuer : ""}${c.year ? " (" + c.year + ")" : ""}\n`;
+    out += "\n";
+  }
+  if (d.languages.length) {
+    out += "LANGUAGES\n";
+    out += d.languages.map(l => `${l.name}${l.level ? " (" + l.level + ")" : ""}`).join(", ") + "\n";
+  }
   return out.trim();
 }
 
@@ -41,7 +62,7 @@ export default function ResumeBuilder() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<ResumeData>({
     fullName: "", jobTitle: "", email: "", phone: "", location: "", linkedin: "", website: "",
-    summary: "", experience: [], education: [], skills: []
+    summary: "", experience: [], education: [], skills: [], projects: [], certifications: [], languages: []
   });
   const [skillInput, setSkillInput] = useState("");
 
@@ -87,7 +108,7 @@ export default function ResumeBuilder() {
         {step === 0 && <div className="space-y-4">
           <h2 className="mb-2 text-xl font-extrabold">Personal Details</h2>
           <div><label className={labelCls}>Full name</label><input className={inputCls} value={data.fullName} onChange={e=>update("fullName", e.target.value)} placeholder="Jordan Lee"/></div>
-          <div><label className={labelCls}>Professional title</label><input className={inputCls} value={data.jobTitle} onChange={e=>update("jobTitle", e.target.value)} placeholder="Frontend Developer"/></div>
+          <div><label className={labelCls}>Professional title</label><input className={inputCls} value={data.jobTitle} onChange={e=>update("jobTitle", e.target.value)} placeholder="Senior Frontend Engineer"/></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className={labelCls}>Email</label><input className={inputCls} value={data.email} onChange={e=>update("email", e.target.value)} placeholder="jordan@email.com"/></div>
             <div><label className={labelCls}>Phone</label><input className={inputCls} value={data.phone} onChange={e=>update("phone", e.target.value)} placeholder="(555) 123-4567"/></div>
@@ -97,7 +118,7 @@ export default function ResumeBuilder() {
             <div><label className={labelCls}>LinkedIn</label><input className={inputCls} value={data.linkedin} onChange={e=>update("linkedin", e.target.value)} placeholder="linkedin.com/in/jordan"/></div>
             <div><label className={labelCls}>Portfolio / Website</label><input className={inputCls} value={data.website} onChange={e=>update("website", e.target.value)} placeholder="jordan.dev"/></div>
           </div>
-          <div><label className={labelCls}>Professional summary</label><textarea className={`${inputCls} min-h-28 resize-y`} value={data.summary} onChange={e=>update("summary", e.target.value)} placeholder="A brief 2-3 sentence summary of your experience and strengths…"/></div>
+          <div><label className={labelCls}>Professional summary</label><textarea className={`${inputCls} min-h-28 resize-y`} value={data.summary} onChange={e=>update("summary", e.target.value)} placeholder="2-3 sentences: your role, years of experience, and a standout strength or achievement."/></div>
         </div>}
 
         {step === 1 && <div className="space-y-5">
@@ -120,7 +141,7 @@ export default function ResumeBuilder() {
                 <label className={labelCls}>Responsibilities / achievements</label>
                 {exp.bullets.map((b, bi) => (
                   <div key={bi} className="flex gap-2">
-                    <input className={inputCls} value={b} onChange={e=>{const n=[...data.experience]; const nb=[...exp.bullets]; nb[bi]=e.target.value; n[i]={...exp, bullets:nb}; update("experience", n);}} placeholder="Led a team of 5 engineers…"/>
+                    <input className={inputCls} value={b} onChange={e=>{const n=[...data.experience]; const nb=[...exp.bullets]; nb[bi]=e.target.value; n[i]={...exp, bullets:nb}; update("experience", n);}} placeholder="Led a team of 5 engineers, shipped X, improved Y by Z%…"/>
                     <button onClick={()=>{const n=[...data.experience]; const nb=exp.bullets.filter((_,x)=>x!==bi); n[i]={...exp, bullets:nb.length?nb:[""]}; update("experience", n);}} className="text-[#8d7d91]"><X size={18}/></button>
                   </div>
                 ))}
@@ -161,7 +182,47 @@ export default function ResumeBuilder() {
           </div>
         </div>}
 
-        {step === 4 && <div>
+        {step === 4 && <div className="space-y-8">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Projects <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("projects", [...data.projects, emptyProject()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            {data.projects.map((p, i) => (
+              <div key={p.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
+                <div className="flex justify-end"><button onClick={()=>update("projects", data.projects.filter(x=>x.id!==p.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button></div>
+                <input className={inputCls} value={p.name} onChange={e=>{const n=[...data.projects]; n[i]={...p, name:e.target.value}; update("projects", n);}} placeholder="Project name"/>
+                <textarea className={`${inputCls} min-h-16 resize-y`} value={p.description} onChange={e=>{const n=[...data.projects]; n[i]={...p, description:e.target.value}; update("projects", n);}} placeholder="What it does, your role, the outcome…"/>
+                <input className={inputCls} value={p.technologies} onChange={e=>{const n=[...data.projects]; n[i]={...p, technologies:e.target.value}; update("projects", n);}} placeholder="Technologies used (e.g. React, Node.js, PostgreSQL)"/>
+                <input className={inputCls} value={p.link} onChange={e=>{const n=[...data.projects]; n[i]={...p, link:e.target.value}; update("projects", n);}} placeholder="Link (optional)"/>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-5">
+            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Certifications <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("certifications", [...data.certifications, emptyCert()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            {data.certifications.map((c, i) => (
+              <div key={c.id} className="rounded-2xl border border-[#e3d9e6] p-4 space-y-3">
+                <div className="flex justify-end"><button onClick={()=>update("certifications", data.certifications.filter(x=>x.id!==c.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button></div>
+                <input className={inputCls} value={c.name} onChange={e=>{const n=[...data.certifications]; n[i]={...c, name:e.target.value}; update("certifications", n);}} placeholder="Certification name"/>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input className={inputCls} value={c.issuer} onChange={e=>{const n=[...data.certifications]; n[i]={...c, issuer:e.target.value}; update("certifications", n);}} placeholder="Issuing organization"/>
+                  <input className={inputCls} value={c.year} onChange={e=>{const n=[...data.certifications]; n[i]={...c, year:e.target.value}; update("certifications", n);}} placeholder="Year"/>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-5">
+            <div className="flex items-center justify-between"><h2 className="text-xl font-extrabold">Languages <span className="text-sm font-medium text-[#8a798e]">(optional)</span></h2><button onClick={()=>update("languages", [...data.languages, emptyLang()])} className="flex items-center gap-1.5 rounded-full bg-[#f0e7f2] px-3 py-2 text-sm font-bold text-[#52205f]"><Plus size={16}/>Add</button></div>
+            {data.languages.map((l, i) => (
+              <div key={l.id} className="flex gap-3">
+                <input className={inputCls} value={l.name} onChange={e=>{const n=[...data.languages]; n[i]={...l, name:e.target.value}; update("languages", n);}} placeholder="Language"/>
+                <input className={inputCls} value={l.level} onChange={e=>{const n=[...data.languages]; n[i]={...l, level:e.target.value}; update("languages", n);}} placeholder="Level (e.g. Fluent)"/>
+                <button onClick={()=>update("languages", data.languages.filter(x=>x.id!==l.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button>
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        {step === 5 && <div>
           <h2 className="mb-4 text-xl font-extrabold">Preview</h2>
           <pre className="max-h-[500px] overflow-auto whitespace-pre-wrap rounded-2xl border border-[#dfd4e1] bg-[#fcfafc] p-5 font-sans text-[15px] leading-7 text-[#3c2842]">{resumeToText(data)}</pre>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
