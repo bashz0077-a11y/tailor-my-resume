@@ -350,7 +350,14 @@ export default function ResumeBuilder() {
             {data.languages.map((l, i) => (
               <div key={l.id} className="flex gap-3">
                 <input className={inputCls} value={l.name} onChange={e=>{const n=[...data.languages]; n[i]={...l, name:e.target.value}; update("languages", n);}} placeholder="Language"/>
-                <input className={inputCls} value={l.level} onChange={e=>{const n=[...data.languages]; n[i]={...l, level:e.target.value}; update("languages", n);}} placeholder="Level (e.g. Fluent)"/>
+                <select className={inputCls} value={l.level} onChange={e=>{const n=[...data.languages]; n[i]={...l, level:e.target.value}; update("languages", n);}}>
+                  <option value="">Proficiency level</option>
+                  <option value="Native">Native</option>
+                  <option value="Fluent">Fluent</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="Conversational">Conversational</option>
+                  <option value="Basic">Basic</option>
+                </select>
                 <button onClick={()=>update("languages", data.languages.filter(x=>x.id!==l.id))} className="text-[#8d7d91]"><Trash2 size={17}/></button>
               </div>
             ))}
