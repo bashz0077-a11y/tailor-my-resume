@@ -41,7 +41,11 @@ export default function ResumeApp() {
   const resultsRef = useRef<HTMLDivElement>(null);
 
 
-  useEffect(() => setUsed(Number(localStorage.getItem("tmr-uses") || 0)), []);
+  useEffect(() => {
+    setUsed(Number(localStorage.getItem("tmr-uses") || 0));
+    const prefill = sessionStorage.getItem("tmr-prefill-resume");
+    if (prefill) { setResume(prefill); sessionStorage.removeItem("tmr-prefill-resume"); }
+  }, []);
 
 
   async function parseFile(file?: File) {
