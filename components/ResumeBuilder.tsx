@@ -13,13 +13,22 @@ const emptyProject = (): ProjectEntry => ({ id: crypto.randomUUID(), name: "", d
 const emptyCert = (): CertificationEntry => ({ id: crypto.randomUUID(), name: "", issuer: "", year: "" });
 const emptyLang = (): LanguageEntry => ({ id: crypto.randomUUID(), name: "", level: "" });
 
+function formatMonthYear(v: string) {
+  if (!v) return "";
+  const [y, m] = v.split("-");
+  if (!y || !m) return v;
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const idx = parseInt(m, 10) - 1;
+  return months[idx] ? `${months[idx]} ${y}` : v;
+}
+
 function resumeToText(d: ResumeData) {
   let out = `${d.fullName}\n${d.jobTitle}\n${[d.email, d.phone, d.location].filter(Boolean).join(" | ")}\n${[d.linkedin, d.website].filter(Boolean).join(" | ")}\n\n`;
   if (d.summary.trim()) out += `SUMMARY\n${d.summary}\n\n`;
   if (d.experience.length) {
     out += "EXPERIENCE\n";
     for (const e of d.experience) {
-      out += `${e.jobTitle} — ${e.company}${e.location ? ", " + e.location : ""} (${e.startDate} - ${e.current ? "Present" : e.endDate})\n`;
+      out += `${e.jobTitle} — ${e.company}${e.location ? ", " + e.location : ""} (${formatMonthYear(e.startDate)} - ${e.current ? "Present" : formatMonthYear(e.endDate)})\n`;
       for (const b of e.bullets) if (b.trim()) out += `- ${b}\n`;
       out += "\n";
     }
@@ -86,7 +95,7 @@ function ResumePreview({ d }: { d: ResumeData }) {
         {d.experience.map(e => <div key={e.id}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p className="font-bold text-[#28122f]">{e.jobTitle}{e.company && <span className="font-medium text-[#5c4d60]"> — {e.company}</span>}</p>
-            <p className="text-sm text-[#8a798e]">{e.startDate}{(e.startDate || e.endDate || e.current) && " – "}{e.current ? "Present" : e.endDate}</p>
+            <p className="text-sm text-[#8a798e]">{formatMonthYear(e.startDate)}{(e.startDate || e.endDate || e.current) && " – "}{e.current ? "Present" : formatMonthYear(e.endDate)}</p>
           </div>
           {e.location && <p className="text-sm text-[#8a798e]">{e.location}</p>}
           {e.bullets.filter(b=>b.trim()).length > 0 && <ul className="mt-1.5 space-y-1 pl-4">{e.bullets.filter(b=>b.trim()).map((b,i) => <li key={i} className="list-disc text-[15px] leading-6 text-[#3c2842]">{b}</li>)}</ul>}
@@ -184,7 +193,7 @@ export default function ResumeBuilder() {
         {data.experience.length > 0 && <View>
           <Text style={s.sectionTitle}>EXPERIENCE</Text>
           {data.experience.map(e => <View key={e.id} style={s.block}>
-            <View style={s.row}><Text style={s.bold}>{e.jobTitle}{e.company ? ` — ${e.company}` : ""}</Text><Text style={s.dim}>{e.startDate}{(e.startDate || e.endDate || e.current) ? " - " : ""}{e.current ? "Present" : e.endDate}</Text></View>
+            <View style={s.row}><Text style={s.bold}>{e.jobTitle}{e.company ? ` — ${e.company}` : ""}</Text><Text style={s.dim}>{formatMonthYear(e.startDate)}{(e.startDate || e.endDate || e.current) ? " - " : ""}{e.current ? "Present" : formatMonthYear(e.endDate)}</Text></View>
             {!!e.location && <Text style={s.dim}>{e.location}</Text>}
             {e.bullets.filter(b => b.trim()).map((b, i) => <View key={i} style={s.bullet}><Text style={s.bulletDot}>•</Text><Text>{b}</Text></View>)}
           </View>)}
@@ -268,8 +277,8 @@ export default function ResumeBuilder() {
               </div>
               <input className={inputCls} value={exp.location} onChange={e=>{const n=[...data.experience]; n[i]={...exp, location:e.target.value}; update("experience", n);}} placeholder="Location"/>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input className={inputCls} value={exp.startDate} onChange={e=>{const n=[...data.experience]; n[i]={...exp, startDate:e.target.value}; update("experience", n);}} placeholder="Start date (e.g. Jan 2021)"/>
-                <input className={inputCls} value={exp.endDate} disabled={exp.current} onChange={e=>{const n=[...data.experience]; n[i]={...exp, endDate:e.target.value}; update("experience", n);}} placeholder="End date" />
+                <div><label className={labelCls}>Start date</label><input type="month" className={inputCls} value={exp.startDate} onChange={e=>{const n=[...data.experience]; n[i]={...exp, startDate:e.target.value}; update("experience", n);}}/></div>
+                <div><label className={labelCls}>End date</label><input type="month" className={inputCls} value={exp.endDate} disabled={exp.current} onChange={e=>{const n=[...data.experience]; n[i]={...exp, endDate:e.target.value}; update("experience", n);}}/></div>
               </div>
               <label className="flex items-center gap-2 text-sm font-semibold text-[#4a354f]"><input type="checkbox" checked={exp.current} onChange={e=>{const n=[...data.experience]; n[i]={...exp, current:e.target.checked}; update("experience", n);}}/>I currently work here</label>
               <div className="space-y-2">
@@ -298,8 +307,8 @@ export default function ResumeBuilder() {
                 <input className={inputCls} value={ed.location} onChange={e=>{const n=[...data.education]; n[i]={...ed, location:e.target.value}; update("education", n);}} placeholder="Location"/>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <input className={inputCls} value={ed.startYear} onChange={e=>{const n=[...data.education]; n[i]={...ed, startYear:e.target.value}; update("education", n);}} placeholder="Start year"/>
-                <input className={inputCls} value={ed.endYear} onChange={e=>{const n=[...data.education]; n[i]={...ed, endYear:e.target.value}; update("education", n);}} placeholder="End year"/>
+                <div><label className={labelCls}>Start year</label><input type="number" inputMode="numeric" min="1960" max="2100" className={inputCls} value={ed.startYear} onChange={e=>{const n=[...data.education]; n[i]={...ed, startYear:e.target.value}; update("education", n);}} placeholder="2018"/></div>
+                <div><label className={labelCls}>End year</label><input type="number" inputMode="numeric" min="1960" max="2100" className={inputCls} value={ed.endYear} onChange={e=>{const n=[...data.education]; n[i]={...ed, endYear:e.target.value}; update("education", n);}} placeholder="2022"/></div>
               </div>
               <textarea className={`${inputCls} min-h-20 resize-y`} value={ed.description} onChange={e=>{const n=[...data.education]; n[i]={...ed, description:e.target.value}; update("education", n);}} placeholder="Optional: relevant coursework, honors, GPA…"/>
             </div>
@@ -339,7 +348,7 @@ export default function ResumeBuilder() {
                 <input className={inputCls} value={c.name} onChange={e=>{const n=[...data.certifications]; n[i]={...c, name:e.target.value}; update("certifications", n);}} placeholder="Certification name"/>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input className={inputCls} value={c.issuer} onChange={e=>{const n=[...data.certifications]; n[i]={...c, issuer:e.target.value}; update("certifications", n);}} placeholder="Issuing organization"/>
-                  <input className={inputCls} value={c.year} onChange={e=>{const n=[...data.certifications]; n[i]={...c, year:e.target.value}; update("certifications", n);}} placeholder="Year"/>
+                  <input type="number" inputMode="numeric" min="1960" max="2100" className={inputCls} value={c.year} onChange={e=>{const n=[...data.certifications]; n[i]={...c, year:e.target.value}; update("certifications", n);}} placeholder="Year"/>
                 </div>
               </div>
             ))}
@@ -380,4 +389,4 @@ export default function ResumeBuilder() {
       </div>
     </main>
   </>;
-                                                                        }
+}
