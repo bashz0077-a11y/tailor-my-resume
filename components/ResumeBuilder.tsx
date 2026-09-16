@@ -187,8 +187,8 @@ export default function ResumeBuilder() {
     const c = { ink: "#25162c", accent: "#6d347f", sub: "#6b5a70" };
     const s = StyleSheet.create({
       page: { padding: 42, fontFamily: "Helvetica", fontSize: 10, lineHeight: 1.45, color: c.ink },
-      name: { fontSize: 22, fontFamily: "Helvetica-Bold", color: c.ink, marginBottom: 3 },
-      title: { fontSize: 12, fontFamily: "Helvetica-Bold", color: c.accent, marginBottom: 8 },
+      name: { fontSize: 22, lineHeight: 1.2, fontFamily: "Helvetica-Bold", color: c.ink },
+      title: { fontSize: 12, lineHeight: 1.2, fontFamily: "Helvetica-Bold", color: c.accent, marginTop: 6, marginBottom: 10 },
       contactRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 12, fontSize: 9, color: c.sub },
       hr: { borderBottomWidth: 1.5, borderBottomColor: c.accent, marginBottom: 14 },
       sectionTitle: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: c.accent, marginBottom: 6, marginTop: 12, letterSpacing: 1 },
