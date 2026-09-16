@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles, User, Briefcase, GraduationCap, ListChecks, FolderKanban, Award, Languages as LangIcon, Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
@@ -153,6 +153,24 @@ export default function ResumeBuilder() {
     summary: "", experience: [], education: [], skills: [], projects: [], certifications: [], languages: []
   });
   const [skillInput, setSkillInput] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("tmr-builder-draft");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.data) setData(parsed.data);
+        if (typeof parsed.step === "number") setStep(parsed.step);
+      } catch {}
+    }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem("tmr-builder-draft", JSON.stringify({ data, step }));
+  }, [data, step, loaded]);
 
   function update<K extends keyof ResumeData>(key: K, value: ResumeData[K]) {
     setData(d => ({ ...d, [key]: value }));
