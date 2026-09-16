@@ -363,7 +363,7 @@ export default function ResumeBuilder() {
                   <option value="">Proficiency level</option>
                   <option value="Native">Native</option>
                   <option value="Fluent">Fluent</option>
-                  <option value="Advanced">Advanced</option>
+                  <option value="Professional">Professional</option>
                   <option value="Conversational">Conversational</option>
                   <option value="Basic">Basic</option>
                 </select>
