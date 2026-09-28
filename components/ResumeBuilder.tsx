@@ -248,8 +248,9 @@ export default function ResumeBuilder() {
   }
 
   return <>
-    <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-6">
+    <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-6">
       <Link href="/" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</Link>
+      <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link aria-current="page" href="/resume-builder" className="text-[#52205f]">Resume Builder</Link><Link href="/tailor" className="hover:text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
     </header>
 
     <main className="mx-auto max-w-3xl px-5 pb-24">

@@ -2,6 +2,7 @@
 
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { ArrowRight, Check, Clipboard, Download, FileText, LockKeyhole, Sparkles, UploadCloud, X } from "lucide-react";
 
@@ -45,6 +46,9 @@ export default function ResumeApp() {
     setUsed(Number(localStorage.getItem("tmr-uses") || 0));
     const prefill = sessionStorage.getItem("tmr-prefill-resume");
     if (prefill) { setResume(prefill); sessionStorage.removeItem("tmr-prefill-resume"); }
+    const jobPrefill = sessionStorage.getItem("tmr-prefill-job");
+    if (jobPrefill) { setJob(jobPrefill); sessionStorage.removeItem("tmr-prefill-job"); }
+    sessionStorage.removeItem("tmr-job-intent");
   }, []);
 
 
@@ -128,9 +132,10 @@ export default function ResumeApp() {
 
   return <>
 
-    <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-10">
+    <header className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-6 lg:px-10">
 
       <a href="#top" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</a>
+      <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link href="/resume-builder" className="hover:text-[#52205f]">Resume Builder</Link><Link aria-current="page" href="/tailor" className="text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
 
       <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-used)}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
 
@@ -277,5 +282,4 @@ function ResultCard({ title, text, onCopy, onDownload }: { title: string; text: 
   return <article className="overflow-hidden rounded-3xl border border-[#dfd4e1] bg-white shadow-soft"><div className="flex items-center justify-between border-b border-[#ece4ed] px-5 py-4 sm:px-7"><h3 className="text-lg font-extrabold">{title}</h3><div className="flex gap-2"><button onClick={()=>{onCopy(text);setCopied(true);setTimeout(()=>setCopied(false),1600)}} className="focus-ring flex items-center gap-1.5 rounded-full border border-[#dfd4e1] px-3 py-2 text-sm font-bold transition hover:bg-[#f6f1f7]"><Clipboard size={15}/>{copied?"Copied":"Copy"}</button><button onClick={()=>onDownload(title,text)} className="focus-ring flex items-center gap-1.5 rounded-full bg-[#dfff6b] px-3 py-2 text-sm font-extrabold text-[#2b1831] transition hover:bg-[#d4f45e]"><Download size={15}/>PDF</button></div></div><pre className="max-h-[650px] overflow-auto whitespace-pre-wrap p-5 font-sans text-[15px] leading-7 text-[#4d3c52] sm:p-7">{text}</pre></article>;
 
 }
-
 
