@@ -22,6 +22,9 @@ export default function Home() {
           <Link href="/tailor" className="flex items-center justify-center gap-2 rounded-full border-2 border-[#52205f] px-7 py-4 font-extrabold text-[#52205f] transition hover:bg-[#f6f1f7]">
             Tailor Existing Resume
           </Link>
+          <Link href="/jobs" className="flex items-center justify-center gap-2 rounded-full border-2 border-[#dfd4e1] px-7 py-4 font-extrabold text-[#52205f] transition hover:bg-[#f6f1f7]">
+            Explore Jobs
+          </Link>
         </div>
       </div>
     </main>
