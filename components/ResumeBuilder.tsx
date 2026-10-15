@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { FileText, Plus, Trash2, ArrowRight, ArrowLeft, Download, X, Sparkles, User, Briefcase, GraduationCap, ListChecks, FolderKanban, Award, Languages as LangIcon, Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 import type { ResumeData, WorkExperience, EducationEntry, ProjectEntry, CertificationEntry, LanguageEntry } from "@/lib/types";
@@ -154,6 +155,18 @@ export default function ResumeBuilder() {
   });
   const [skillInput, setSkillInput] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [cloudSaving,setCloudSaving] = useState(false);
+  const [cloudMessage,setCloudMessage] = useState("");
+  async function saveToAccount(){
+    const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if(!url||!key){setCloudMessage("Account storage is unavailable.");return}
+    const s=createClient(url,key);const {data:auth}=await s.auth.getUser();
+    if(!auth.user){setCloudMessage("Sign in to save your resume to your account.");return}
+    setCloudSaving(true);setCloudMessage("");
+    const {error}=await s.from("saved_resumes").insert({user_id:auth.user.id,title:data.jobTitle||data.fullName||"Untitled resume",resume_data:data});
+    setCloudSaving(false);setCloudMessage(error?"Could not save resume. Please try again.":"Resume saved to your account.");
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem("tmr-builder-draft");
@@ -248,6 +261,11 @@ export default function ResumeBuilder() {
   }
 
   return <>
+    <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-5 pt-4">
+      <button type="button" disabled={cloudSaving} onClick={()=>void saveToAccount()} className="rounded-xl bg-[#28122f] px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{cloudSaving?"Saving…":"Save to my account"}</button>
+      <Link href="/saved-resumes" className="text-sm font-bold text-[#84419b] underline">Saved resumes</Link>
+      {cloudMessage&&<span role="status" className="text-sm">{cloudMessage}</span>}
+    </div>
     <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-6">
       <Link href="/" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</Link>
       <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link aria-current="page" href="/resume-builder" className="text-[#52205f]">Resume Builder</Link><Link href="/tailor" className="hover:text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
