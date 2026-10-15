@@ -22,12 +22,12 @@ function client() {
 export default function AccountPage() {
   const [user,setUser]=useState<User|null>(null),[supabase,setSupabase]=useState<SupabaseClient|null>(null);
   const [profile,setProfile]=useState<Profile>(empty),[skillsText,setSkillsText]=useState("");
-  const [ready,setReady]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
+  const [ready,setReady]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(""),[loadError,setLoadError]=useState("");
 
-  useEffect(()=>{const s=client(); if(!s){setReady(true);return} setSupabase(s); void(async()=>{
-    const {data}=await s.auth.getUser(); setUser(data.user);
-    if(data.user){const {data:p}=await s.from("profiles").select("full_name,headline,location,skills,experience_level,preferred_workplace,preferred_employment").eq("id",data.user.id).maybeSingle();
-      if(p){const next=p as Profile;setProfile(next);setSkillsText((next.skills||[]).join(", "));}}
+  useEffect(()=>{const s=client(); if(!s){setLoadError("Account service is unavailable. Please try again later.");setReady(true);return} setSupabase(s); void(async()=>{
+    const {data,error:authError}=await s.auth.getUser(); if(authError){setLoadError("Could not verify your session. Please sign in again.");setReady(true);return;} setUser(data.user);
+    if(data.user){const {data:p,error:profileError}=await s.from("profiles").select("full_name,headline,location,skills,experience_level,preferred_workplace,preferred_employment").eq("id",data.user.id).maybeSingle();
+      if(profileError||!p){setLoadError("Could not load your career profile. Please reload before editing.");}else{const next=p as Profile;setProfile(next);setSkillsText((next.skills||[]).join(", "));}}
     setReady(true);
   })()},[]);
 
@@ -35,12 +35,14 @@ export default function AccountPage() {
     setProfile(p=>({...p,[field]:p[field].includes(value)?p[field].filter(x=>x!==value):[...p[field],value]}));
   }
 
-  async function save(e:FormEvent){e.preventDefault();if(!supabase||!user||saving)return;setSaving(true);setMessage("");
+  async function save(e:FormEvent){e.preventDefault();if(!supabase||!user||saving||loadError)return;setSaving(true);setMessage("");
     const skills=Array.from(new Map(skillsText.split(",").map(x=>x.trim()).filter(Boolean).map(x=>[x.toLocaleLowerCase(),x])).values());
     if(skills.length>30){setMessage("Please use no more than 30 skills.");setSaving(false);return;}
-    const {error}=await supabase.from("profiles").update({...profile,skills}).eq("id",user.id);
-    setSaving(false); if(error){setMessage("Profile could not be saved. Please try again.");return}
-    setProfile(p=>({...p,skills}));setMessage("Career profile saved.");
+    try{const {data:saved,error}=await supabase.from("profiles").update({...profile,skills}).eq("id",user.id).select("id").maybeSingle();
+    if(error||!saved){setMessage("Profile was not saved. Please check your session and try again.");return;}
+    setProfile(p=>({...p,skills}));setSkillsText(skills.join(", "));setMessage("Career profile saved.");}
+    catch{setMessage("Profile could not be saved. Please try again.");}
+    finally{setSaving(false);}
   }
 
   const parsedSkills=skillsText.split(",").map(x=>x.trim()).filter(Boolean);
@@ -55,6 +57,7 @@ export default function AccountPage() {
   return <main className="min-h-screen bg-[#fbfaf7] px-5 py-12 text-[#28122f]"><div className="mx-auto max-w-5xl">
     <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-[#84419b]">Career profile</p><h1 className="mt-2 text-4xl font-semibold">Your job preferences</h1><p className="mt-2 text-[#6b586f]">{user.email}</p></div><Link href="/dashboard" className="rounded-xl border border-[#dfd0e3] bg-white px-4 py-2 font-bold">Dashboard</Link></div>
     <section aria-label="Career profile completion" className="mt-8 rounded-2xl border border-[#eadfeb] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Profile completion</h2><span className="text-sm font-bold text-[#84419b]">{percentage}% · {completed} of 7 fields</span></div><div role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} className="mt-3 h-2 overflow-hidden rounded-full bg-[#f1e8f3]"><div className="h-full rounded-full bg-[#84419b]" style={{width:`${percentage}%`}}/></div><p className="mt-3 text-sm text-[#806f83]">{percentage===100?"All profile sections are filled. Save your changes to update your dashboard.":`Still needed: ${fields.filter(f=>!f.complete).map(f=>f.name).join(", ")}.`}</p></section>
+    {loadError&&<p role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-800">{loadError}</p>}
     <form onSubmit={save} className="mt-8 space-y-6 rounded-3xl border border-[#eadfeb] bg-white p-6 sm:p-8">
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Full name"><input value={profile.full_name} onChange={e=>setProfile({...profile,full_name:e.target.value})} maxLength={100} className="input" /></Field>
@@ -66,7 +69,7 @@ export default function AccountPage() {
       <Choice title="Preferred workplace" values={workplace} selected={profile.preferred_workplace} toggle={v=>toggle("preferred_workplace",v)} />
       <Choice title="Employment type" values={employment} selected={profile.preferred_employment} toggle={v=>toggle("preferred_employment",v)} />
       {message&&<p role="status" className="rounded-xl bg-[#f6f0f7] p-3 text-sm font-semibold">{message}</p>}
-      <button disabled={saving||uniqueSkills>30} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button>
+      <button disabled={saving||uniqueSkills>30||Boolean(loadError)} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button>
     </form>
   </div></main>;
 }
