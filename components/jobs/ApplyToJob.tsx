@@ -36,7 +36,7 @@ export default function ApplyToJob({ jobId }: { jobId: string }) {
     setBusy(true); setMessage("");
     const { data } = await supabase.auth.getUser();
     if (!data.user) { setSignedIn(false); setBusy(false); return; }
-    const { error } = await supabase.from("applications").insert({ job_id: jobId, applicant_id: data.user.id, cover_note: coverNote.trim() || null });
+    const { error } = await supabase.from("applications").insert({ job_id: jobId, applicant_id: data.user.id, cover_note: coverNote.trim() });
     if (error) {
       if (error.code === "23505") setApplied(true);
       else setMessage(error.message);
