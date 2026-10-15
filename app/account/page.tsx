@@ -36,12 +36,15 @@ export default function AccountPage() {
   }
 
   async function save(e:FormEvent){e.preventDefault();if(!supabase||!user||saving)return;setSaving(true);setMessage("");
-    const skills=skillsText.split(",").map(x=>x.trim()).filter(Boolean).slice(0,30);
+    const skills=Array.from(new Map(skillsText.split(",").map(x=>x.trim()).filter(Boolean).map(x=>[x.toLocaleLowerCase(),x])).values());
+    if(skills.length>30){setMessage("Please use no more than 30 skills.");setSaving(false);return;}
     const {error}=await supabase.from("profiles").update({...profile,skills}).eq("id",user.id);
     setSaving(false); if(error){setMessage("Profile could not be saved. Please try again.");return}
     setProfile(p=>({...p,skills}));setMessage("Career profile saved.");
   }
 
+  const parsedSkills=skillsText.split(",").map(x=>x.trim()).filter(Boolean);
+  const uniqueSkills=new Set(parsedSkills.map(x=>x.toLocaleLowerCase())).size;
   const fields=[{name:"Full name",complete:Boolean(profile.full_name?.trim())},{name:"Professional headline",complete:Boolean(profile.headline?.trim())},{name:"Location",complete:Boolean(profile.location?.trim())},{name:"Experience level",complete:Boolean(profile.experience_level)},{name:"Skills",complete:skillsText.split(",").some(x=>Boolean(x.trim()))},{name:"Workplace preferences",complete:profile.preferred_workplace.length>0},{name:"Employment preferences",complete:profile.preferred_employment.length>0}];
   const completed=fields.filter(f=>f.complete).length;
   const percentage=Math.round(completed/fields.length*100);
@@ -59,11 +62,11 @@ export default function AccountPage() {
         <Field label="Location"><input value={profile.location} onChange={e=>setProfile({...profile,location:e.target.value})} maxLength={120} placeholder="Chennai, Tamil Nadu" className="input" /></Field>
         <Field label="Experience level"><select value={profile.experience_level} onChange={e=>setProfile({...profile,experience_level:e.target.value})} className="input"><option value="">Select level</option>{["Entry level","Mid level","Senior level","Lead / Manager"].map(x=><option key={x}>{x}</option>)}</select></Field>
       </div>
-      <Field label="Skills" hint="Separate skills with commas."><input value={skillsText} onChange={e=>setSkillsText(e.target.value)} maxLength={500} placeholder="React, TypeScript, Next.js, Supabase" className="input" /></Field>
+      <Field label="Skills" hint="Separate skills with commas. Duplicates are removed when saving."><input value={skillsText} onChange={e=>setSkillsText(e.target.value)} maxLength={500} aria-describedby="skills-count" placeholder="React, TypeScript, Next.js, Supabase" className="input" /><span id="skills-count" role="status" className={`mt-2 block text-xs font-semibold ${uniqueSkills>30?"text-red-700":"text-[#806f83]"}`}>{uniqueSkills} of 30 unique skills{uniqueSkills>30?" — remove extra skills before saving":""}</span></Field>
       <Choice title="Preferred workplace" values={workplace} selected={profile.preferred_workplace} toggle={v=>toggle("preferred_workplace",v)} />
       <Choice title="Employment type" values={employment} selected={profile.preferred_employment} toggle={v=>toggle("preferred_employment",v)} />
       {message&&<p role="status" className="rounded-xl bg-[#f6f0f7] p-3 text-sm font-semibold">{message}</p>}
-      <button disabled={saving} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button>
+      <button disabled={saving||uniqueSkills>30} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button>
     </form>
   </div></main>;
 }
