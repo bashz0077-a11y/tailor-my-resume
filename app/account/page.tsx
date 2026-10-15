@@ -22,12 +22,13 @@ function client() {
 export default function AccountPage() {
   const [user,setUser]=useState<User|null>(null),[supabase,setSupabase]=useState<SupabaseClient|null>(null);
   const [profile,setProfile]=useState<Profile>(empty),[skillsText,setSkillsText]=useState("");
+  const [savedProfile,setSavedProfile]=useState<Profile|null>(null);
   const [ready,setReady]=useState(false),[saving,setSaving]=useState(false),[message,setMessage]=useState(""),[loadError,setLoadError]=useState("");
 
   useEffect(()=>{const s=client(); if(!s){setLoadError("Account service is unavailable. Please try again later.");setReady(true);return} setSupabase(s); void(async()=>{
     const {data,error:authError}=await s.auth.getUser(); if(authError){setLoadError("Could not verify your session. Please sign in again.");setReady(true);return;} setUser(data.user);
     if(data.user){const {data:p,error:profileError}=await s.from("profiles").select("full_name,headline,location,skills,experience_level,preferred_workplace,preferred_employment").eq("id",data.user.id).maybeSingle();
-      if(profileError||!p){setLoadError("Could not load your career profile. Please reload before editing.");}else{const next=p as Profile;setProfile(next);setSkillsText((next.skills||[]).join(", "));}}
+      if(profileError||!p){setLoadError("Could not load your career profile. Please reload before editing.");}else{const next=p as Profile;setProfile(next);setSavedProfile(next);setSkillsText((next.skills||[]).join(", "));}}
     setReady(true);
   })()},[]);
 
@@ -40,10 +41,14 @@ export default function AccountPage() {
     if(skills.length>30){setMessage("Please use no more than 30 skills.");setSaving(false);return;}
     try{const {data:saved,error}=await supabase.from("profiles").update({...profile,skills}).eq("id",user.id).select("id").maybeSingle();
     if(error||!saved){setMessage("Profile was not saved. Please check your session and try again.");return;}
-    setProfile(p=>({...p,skills}));setSkillsText(skills.join(", "));setMessage("Career profile saved.");}
+    const updated={...profile,skills};setProfile(updated);setSavedProfile(updated);setSkillsText(skills.join(", "));setMessage("Career profile saved.");}
     catch{setMessage("Profile could not be saved. Please try again.");}
     finally{setSaving(false);}
   }
+
+  const normalizedSkills=Array.from(new Map(skillsText.split(",").map(x=>x.trim()).filter(Boolean).map(x=>[x.toLocaleLowerCase(),x])).values());
+  const hasUnsavedChanges=Boolean(savedProfile)&&JSON.stringify({...profile,skills:normalizedSkills})!==JSON.stringify(savedProfile);
+  function discardChanges(){if(!savedProfile||saving)return;setProfile(savedProfile);setSkillsText(savedProfile.skills.join(", "));setMessage("Unsaved changes discarded.");}
 
   const parsedSkills=skillsText.split(",").map(x=>x.trim()).filter(Boolean);
   const uniqueSkills=new Set(parsedSkills.map(x=>x.toLocaleLowerCase())).size;
@@ -68,8 +73,9 @@ export default function AccountPage() {
       <Field label="Skills" hint="Separate skills with commas. Duplicates are removed when saving."><input value={skillsText} onChange={e=>setSkillsText(e.target.value)} maxLength={500} aria-describedby="skills-count" placeholder="React, TypeScript, Next.js, Supabase" className="input" /><span id="skills-count" role="status" className={`mt-2 block text-xs font-semibold ${uniqueSkills>30?"text-red-700":"text-[#806f83]"}`}>{uniqueSkills} of 30 unique skills{uniqueSkills>30?" — remove extra skills before saving":""}</span></Field>
       <Choice title="Preferred workplace" values={workplace} selected={profile.preferred_workplace} toggle={v=>toggle("preferred_workplace",v)} />
       <Choice title="Employment type" values={employment} selected={profile.preferred_employment} toggle={v=>toggle("preferred_employment",v)} />
+      {hasUnsavedChanges&&<p role="status" className="text-sm font-semibold text-[#84419b]">You have unsaved changes.</p>}
       {message&&<p role="status" className="rounded-xl bg-[#f6f0f7] p-3 text-sm font-semibold">{message}</p>}
-      <button disabled={saving||uniqueSkills>30||Boolean(loadError)} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button>
+      <div className="flex flex-wrap items-center gap-3"><button disabled={saving||uniqueSkills>30||Boolean(loadError)||!hasUnsavedChanges} className="rounded-xl bg-[#28122f] px-6 py-3 font-bold text-white disabled:opacity-60">{saving?"Saving…":"Save career profile"}</button><button type="button" onClick={discardChanges} disabled={!hasUnsavedChanges||saving} className="rounded-xl border border-[#dfd0e3] px-5 py-3 font-bold disabled:opacity-50">Discard changes</button></div>
     </form>
   </div></main>;
 }
