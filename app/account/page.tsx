@@ -42,11 +42,16 @@ export default function AccountPage() {
     setProfile(p=>({...p,skills}));setMessage("Career profile saved.");
   }
 
+  const fields=[{name:"Full name",complete:Boolean(profile.full_name?.trim())},{name:"Professional headline",complete:Boolean(profile.headline?.trim())},{name:"Location",complete:Boolean(profile.location?.trim())},{name:"Experience level",complete:Boolean(profile.experience_level)},{name:"Skills",complete:skillsText.split(",").some(x=>Boolean(x.trim()))},{name:"Workplace preferences",complete:profile.preferred_workplace.length>0},{name:"Employment preferences",complete:profile.preferred_employment.length>0}];
+  const completed=fields.filter(f=>f.complete).length;
+  const percentage=Math.round(completed/fields.length*100);
+
   if(!ready)return <main className="min-h-screen bg-[#fbfaf7] p-8">Loading account…</main>;
   if(!user)return <main className="min-h-screen bg-[#fbfaf7] px-5 py-16"><div className="mx-auto max-w-xl rounded-3xl border border-[#eadfeb] bg-white p-8"><h1 className="text-3xl font-semibold text-[#28122f]">Sign in to your account</h1><p className="mt-3 text-[#6b586f]">Manage your career profile, saved jobs and applications.</p><Link href="/auth" className="mt-7 inline-flex rounded-xl bg-[#28122f] px-5 py-3 font-bold text-white">Sign in</Link></div></main>;
 
   return <main className="min-h-screen bg-[#fbfaf7] px-5 py-12 text-[#28122f]"><div className="mx-auto max-w-5xl">
     <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-widest text-[#84419b]">Career profile</p><h1 className="mt-2 text-4xl font-semibold">Your job preferences</h1><p className="mt-2 text-[#6b586f]">{user.email}</p></div><Link href="/dashboard" className="rounded-xl border border-[#dfd0e3] bg-white px-4 py-2 font-bold">Dashboard</Link></div>
+    <section aria-label="Career profile completion" className="mt-8 rounded-2xl border border-[#eadfeb] bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Profile completion</h2><span className="text-sm font-bold text-[#84419b]">{percentage}% · {completed} of 7 fields</span></div><div role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage} className="mt-3 h-2 overflow-hidden rounded-full bg-[#f1e8f3]"><div className="h-full rounded-full bg-[#84419b]" style={{width:`${percentage}%`}}/></div><p className="mt-3 text-sm text-[#806f83]">{percentage===100?"All profile sections are filled. Save your changes to update your dashboard.":`Still needed: ${fields.filter(f=>!f.complete).map(f=>f.name).join(", ")}.`}</p></section>
     <form onSubmit={save} className="mt-8 space-y-6 rounded-3xl border border-[#eadfeb] bg-white p-6 sm:p-8">
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Full name"><input value={profile.full_name} onChange={e=>setProfile({...profile,full_name:e.target.value})} maxLength={100} className="input" /></Field>
