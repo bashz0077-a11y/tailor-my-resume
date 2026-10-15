@@ -2,19 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 type Application = { id:string; job_id:string; status:string; created_at:string; cover_note:string|null; jobs: { title:string; company_name:string; location:string } | null };
 function client(){const u=process.env.NEXT_PUBLIC_SUPABASE_URL;const k=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;return u&&k?createClient(u,k):null;}
 
 export default function ApplicationsPage(){
- const params=useSearchParams();
- const requestedStatus=params.get("status");
- const [items,setItems]=useState<Application[]>([]); const [loading,setLoading]=useState(true); const [signedIn,setSignedIn]=useState(false); const [search,setSearch]=useState(""); const [filter,setFilter]=useState(requestedStatus==="reviewing"||requestedStatus==="shortlisted"?requestedStatus:"all"); const [sort,setSort]=useState<"newest"|"oldest"|"az"|"za">("newest"); const [error,setError]=useState("");
+ const [items,setItems]=useState<Application[]>([]); const [loading,setLoading]=useState(true); const [signedIn,setSignedIn]=useState(false); const [search,setSearch]=useState(""); const [filter,setFilter]=useState("all"); const [sort,setSort]=useState<"newest"|"oldest"|"az"|"za">("newest"); const [error,setError]=useState("");
  async function load(){setLoading(true);setError("");const s=client();if(!s){setError("Applications are temporarily unavailable.");setLoading(false);return;}try{const {data:a,error:authError}=await s.auth.getUser();if(authError){setError("Unable to verify your session. Please try again.");return;}setSignedIn(Boolean(a.user));if(!a.user){setItems([]);return;}const {data,error:queryError}=await s.from("applications").select("id,job_id,status,created_at,cover_note,jobs(title,company_name,location)").eq("applicant_id",a.user.id).order("created_at",{ascending:false});if(queryError)setError("Unable to load your applications. Please try again.");else setItems((data||[]) as unknown as Application[]);}catch{setError("Unable to load your applications. Please try again.");}finally{setLoading(false);}}
  useEffect(()=>{void load();},[]);
- useEffect(()=>{setFilter(requestedStatus==="reviewing"||requestedStatus==="shortlisted"?requestedStatus:"all");},[requestedStatus]);
+ useEffect(()=>{const status=new URLSearchParams(window.location.search).get("status");if(status==="reviewing"||status==="shortlisted")setFilter(status);},[]);
  const statuses=["applied","reviewing","shortlisted","rejected"] as const; const counts=Object.fromEntries(statuses.map(s=>[s,items.filter(a=>a.status===s).length])) as Record<typeof statuses[number],number>; const visible=items.filter(a=>(filter==="all"||a.status===filter)&&`${a.jobs?.title||""} ${a.jobs?.company_name||""} ${a.jobs?.location||""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a,b)=>sort==="az"?(a.jobs?.title||"").localeCompare(b.jobs?.title||""):sort==="za"?(b.jobs?.title||"").localeCompare(a.jobs?.title||""):sort==="oldest"?new Date(a.created_at).getTime()-new Date(b.created_at).getTime():new Date(b.created_at).getTime()-new Date(a.created_at).getTime());
  if(loading)return <main className="min-h-screen bg-[#fbfaf7] p-8">Loading applications…</main>;
  if(!signedIn)return <main className="min-h-screen bg-[#fbfaf7] px-5 py-16"><div className="mx-auto max-w-xl rounded-3xl border bg-white p-8"><h1 className="text-3xl font-semibold text-[#28122f]">My applications</h1><p className="mt-3 text-[#6b586f]">Sign in to track jobs you applied to.</p><Link href="/auth" className="mt-6 inline-flex rounded-xl bg-[#28122f] px-5 py-3 font-bold text-white">Sign in</Link></div></main>;
