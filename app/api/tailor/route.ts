@@ -145,7 +145,29 @@ export async function POST(request: Request) {
     const length = Number(request.headers.get("content-length"));
     if (Number.isFinite(length) && length > 100000) return NextResponse.json({ error: "Request is too large." }, { status: 413 });
     let body: unknown;
-    try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON request." }, { status: 400 }); }
+    try {
+      // Enforce a real byte limit even if Content-Length is absent or inaccurate.
+      const reader = request.body?.getReader();
+      if (!reader) return NextResponse.json({ error: "A JSON body is required." }, { status: 400 });
+      const chunks: Uint8Array[] = [];
+      let bytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if (bytes > 100000) {
+            await reader.cancel();
+            return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+          }
+          chunks.push(value);
+        }
+      } finally { reader.releaseLock(); }
+      const input = new Uint8Array(bytes);
+      let offset = 0;
+      for (const chunk of chunks) { input.set(chunk, offset); offset += chunk.byteLength; }
+      body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input));
+    } catch { return NextResponse.json({ error: "Invalid JSON request." }, { status: 400 }); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Provide a resume and job description as text." }, { status: 400 });
     const fields = body as Record<string, unknown>;
     const { resume, jobDescription } = fields;
