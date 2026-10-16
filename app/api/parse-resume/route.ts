@@ -5,6 +5,11 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    // Reject oversized uploads before multipart parsing when length is available.
+    const declaredLength = request.headers.get("content-length");
+    if (declaredLength && Number(declaredLength) > 6 * 1024 * 1024) {
+      return NextResponse.json({ error: "Upload is too large. Maximum PDF size is 5 MB." }, { status: 413 });
+    }
     const data = await request.formData();
     const file = data.get("file");
     if (!(file instanceof File)) return NextResponse.json({ error: "Please choose a PDF file." }, { status: 400 });
