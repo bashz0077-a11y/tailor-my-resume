@@ -104,23 +104,38 @@ async function callGemini(prompt: string) {
 type ScoreResult = { fitScore: number; fitLabel: string; fitWarning: string | null; keySkills: string[]; matchNotes: string[] };
 type GenResult = { jobTitle: string; tailoredResume: string; coverLetter: string };
 
+function safeString(value: unknown, fallback: string, limit = 10000): string {
+  return typeof value === "string" ? value.slice(0, limit) : fallback;
+}
+
+function safeStringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").slice(0, 30).map(item => item.slice(0, 500))
+    : [];
+}
+
 async function scoreResume(resume: string, job: string): Promise<ScoreResult> {
   const r = await callGemini(SCORE_PROMPT(resume, job));
+  if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error("Invalid AI score response");
+  const score = typeof r.fitScore === "number" && Number.isFinite(r.fitScore)
+    ? Math.round(Math.min(100, Math.max(0, r.fitScore)))
+    : 50;
   return {
-    fitScore: typeof r.fitScore === "number" ? r.fitScore : 50,
-    fitLabel: r.fitLabel || "Fit unclear",
-    fitWarning: r.fitScore >= 40 ? null : (r.fitWarning || null),
-    keySkills: Array.isArray(r.keySkills) ? r.keySkills : [],
-    matchNotes: Array.isArray(r.matchNotes) ? r.matchNotes : []
+    fitScore: score,
+    fitLabel: safeString(r.fitLabel, "Fit unclear", 100),
+    fitWarning: score >= 40 ? null : (typeof r.fitWarning === "string" ? r.fitWarning.slice(0, 500) : null),
+    keySkills: safeStringList(r.keySkills),
+    matchNotes: safeStringList(r.matchNotes)
   };
 }
 
 async function generateCandidate(originalResume: string, job: string): Promise<GenResult> {
   const r = await callGemini(GENERATE_PROMPT(originalResume, job));
+  if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error("Invalid AI generation response");
   return {
-    jobTitle: r.jobTitle || "this role",
-    tailoredResume: r.tailoredResume || originalResume,
-    coverLetter: r.coverLetter || ""
+    jobTitle: safeString(r.jobTitle, "this role", 200),
+    tailoredResume: safeString(r.tailoredResume, originalResume, 30000),
+    coverLetter: safeString(r.coverLetter, "", 15000)
   };
 }
 
