@@ -78,6 +78,7 @@ async function callGemini(prompt: string) {
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(45000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -88,8 +89,7 @@ async function callGemini(prompt: string) {
     }
   );
   if (!response.ok) {
-    const errText = await response.text();
-    console.error("Gemini API error:", errText);
+    console.error("Gemini API request failed with HTTP status:", response.status);
     throw new Error("AI service error");
   }
   const payload = await response.json();
@@ -126,8 +126,15 @@ async function generateCandidate(originalResume: string, job: string): Promise<G
 
 export async function POST(request: Request) {
   try {
-    const { resume, jobDescription } = await request.json();
-    if (!resume?.trim() || !jobDescription?.trim()) return NextResponse.json({ error: "Add both your resume and the job description." }, { status: 400 });
+    if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) return NextResponse.json({ error: "Send a JSON request." }, { status: 415 });
+    const length = Number(request.headers.get("content-length"));
+    if (Number.isFinite(length) && length > 100000) return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON request." }, { status: 400 }); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Provide a resume and job description as text." }, { status: 400 });
+    const fields = body as Record<string, unknown>;
+    const { resume, jobDescription } = fields;
+    if (typeof resume !== "string" || typeof jobDescription !== "string" || !resume.trim() || !jobDescription.trim()) return NextResponse.json({ error: "Add both your resume and the job description as text." }, { status: 400 });
     if (resume.length > 30000 || jobDescription.length > 20000) return NextResponse.json({ error: "The text is too long. Please shorten it and try again." }, { status: 413 });
 
     if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
@@ -188,7 +195,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (e) {
-    console.error("Tailor route error:", e);
+    console.error("Tailor route failed:", e instanceof Error ? e.name : "Unknown error");
     return NextResponse.json({ error: "We couldn't tailor your documents right now. Please try again." }, { status: 500 });
   }
 }
