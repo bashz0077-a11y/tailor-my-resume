@@ -11,7 +11,7 @@ A polished Next.js app that tailors a resume and cover letter to a job descripti
 - Copy and PDF download actions for both documents
 - Three-use browser-based free limit, ready to replace with account billing later
 - Clear validation and friendly errors for missing text, invalid files, and unreadable PDFs
-- Optional OpenAI-powered rewriting with an honest, fact-preserving prompt
+- Optional Gemini-powered rewriting with an honest, fact-preserving prompt
 - Responsive premium UI built with Tailwind CSS
 
 ## Run locally
@@ -24,7 +24,7 @@ A polished Next.js app that tailors a resume and cover letter to a job descripti
    npm install
    ```
 
-4. Copy `.env.example` to `.env.local`. Add an `OPENAI_API_KEY` if you want AI-powered rewriting. Without a key, the built-in local tailoring algorithm is used.
+4. Create `.env.local` and set `GEMINI_API_KEY` for Gemini rewriting (optionally `GEMINI_MODEL`). Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for authenticated job features. Without a Gemini key, local tailoring is used. Do not expose server-side secrets through `NEXT_PUBLIC_` variables.
 5. Start the development server:
 
    ```bash
@@ -38,7 +38,7 @@ A polished Next.js app that tailors a resume and cover letter to a job descripti
 1. Push this project to a GitHub repository.
 2. In Vercel, choose **Add New → Project** and import that repository.
 3. Vercel detects Next.js automatically; keep the default build settings.
-4. If you use AI rewriting, add `OPENAI_API_KEY` and optionally `OPENAI_MODEL` under **Project Settings → Environment Variables**.
+4. Add `GEMINI_API_KEY` and optionally `GEMINI_MODEL` for AI rewriting. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for authenticated job features. Configure Production and Preview separately; never expose service-role or Gemini keys to the browser.
 5. Deploy.
 
 ## How the backend works
@@ -49,11 +49,11 @@ A polished Next.js app that tailors a resume and cover letter to a job descripti
 
 ## Important production note
 
-The three-use limit is intentionally stored in `localStorage`, as requested. Users can reset browser storage, so a real paywall should later move usage tracking to authenticated server-side storage (for example, Supabase or Vercel Postgres).
+The three-use limit is stored in `localStorage` and is **not** a security boundary. The public AI endpoint currently has no server-side quota or rate limit; do not enable a paid Gemini key for unrestricted public traffic until abuse protection is implemented. Users can reset browser storage, so a real paywall should later move usage tracking to authenticated server-side storage (for example, Supabase or Vercel Postgres).
 
 ## Beginner-friendly places to customise
 
 - Brand colours and global styles: `app/globals.css` and Tailwind classes in `components/ResumeApp.tsx`
-- AI behaviour and safety rules: `systemPrompt` in `app/api/tailor/route.ts`
+- AI behaviour and safety rules: `SCORE_PROMPT` and `GENERATE_PROMPT` in `app/api/tailor/route.ts`
 - Local fallback logic: `lib/tailor.ts`
 - Free usage count: `FREE_LIMIT` in `components/ResumeApp.tsx`
