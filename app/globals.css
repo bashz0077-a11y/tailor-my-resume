@@ -17,3 +17,22 @@ body { margin: 0; color: #24152b; background: #fbfaf7; font-family: var(--font-m
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .result-enter { animation: rise .4s ease both; }
+
+/* Mobile-first accessibility and resilient layout defaults. */
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-wrap: anywhere; }
+img, video, svg { max-width: 100%; }
+button, input, textarea, select { font: inherit; }
+button, a, input, textarea, select { touch-action: manipulation; }
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid #84419b;
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px; }
+  main { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
