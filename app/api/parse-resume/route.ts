@@ -12,13 +12,15 @@ export async function POST(request: Request) {
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "Please upload a PDF smaller than 5 MB." }, { status: 413 });
 
     const buffer = new Uint8Array(await file.arrayBuffer());
+    if (buffer.length < 5 || String.fromCharCode(...buffer.slice(0, 5)) !== "%PDF-") return NextResponse.json({ error: "This file is not a valid PDF." }, { status: 415 });
     const pdf = await getDocumentProxy(buffer);
     const { text } = await extractText(pdf, { mergePages: true });
 
     if (!text.trim()) return NextResponse.json({ error: "We couldn't find readable text in this PDF. Try pasting your resume instead." }, { status: 422 });
+    if (text.length > 30000) return NextResponse.json({ error: "This PDF contains too much text. Please shorten the resume." }, { status: 413 });
     return NextResponse.json({ text: text.trim() });
   } catch (err) {
-    console.error("Parse resume error:", err);
+    console.error("Parse resume failed:", err instanceof Error ? err.name : "Unknown error");
     return NextResponse.json({ error: "We couldn't read that PDF. Try another file or paste the text." }, { status: 500 });
   }
 }
