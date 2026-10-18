@@ -88,7 +88,7 @@ export default function ResumeApp() {
 
     if (!resume.trim() || !job.trim()) { setError("Add your resume and the job description before continuing."); return; }
 
-    if (used >= FREE_LIMIT) { setError("You’ve used all 3 free tailored resumes on this browser."); return; }
+    if ((serverUsage ?? used) >= FREE_LIMIT) { setError("You’ve used all 3 free tailored resumes."); return; }
 
     setLoading(true);
 
@@ -111,6 +111,7 @@ export default function ResumeApp() {
       setResult(data);
 
       const next = used + 1; setUsed(next); localStorage.setItem("tmr-uses", String(next));
+      if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 
