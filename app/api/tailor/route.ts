@@ -174,7 +174,13 @@ export async function POST(request: Request) {
     if (typeof resume !== "string" || typeof jobDescription !== "string" || !resume.trim() || !jobDescription.trim()) return NextResponse.json({ error: "Add both your resume and the job description as text." }, { status: 400 });
     if (resume.length > 30000 || jobDescription.length > 20000) return NextResponse.json({ error: "The text is too long. Please shorten it and try again." }, { status: 413 });
 
-    if (!process.env.GEMINI_API_KEY) return NextResponse.json(localTailor(resume, jobDescription));
+    // Cost safety: client-side localStorage credits are not enforceable.
+    // Keep Gemini disabled by default until durable server-side quotas are added.
+    // Explicit opt-in is required even when GEMINI_API_KEY exists.
+    if (process.env.ENABLE_PAID_AI !== "true" || !process.env.GEMINI_API_KEY) {
+      return NextResponse.json(localTailor(resume, jobDescription));
+    }
+
 
     // STEP 1: score the untouched original resume, IN PARALLEL with
     // generating the first candidate. These two calls don't depend on
