@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { localTailor } from "@/lib/tailor";
 import type { TailorResult } from "@/lib/types";
 
@@ -181,6 +182,17 @@ export async function POST(request: Request) {
       return NextResponse.json(localTailor(resume, jobDescription));
     }
 
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const bearer = request.headers.get("authorization")?.match(/^Bearer (\\S+)$/i)?.[1];
+    if (!url || !key || !bearer) return NextResponse.json({ error: "Sign in to use AI tailoring." }, { status: 401 });
+    const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${bearer}` } } });
+    const { data: userData, error: authError } = await supabase.auth.getUser(bearer);
+    if (authError || !userData.user) return NextResponse.json({ error: "Your session has expired. Please sign in again." }, { status: 401 });
+    const { data: claimed, error: quotaError } = await supabase.rpc("claim_ai_tailor_use");
+    if (quotaError) return NextResponse.json({ error: "AI usage limits are unavailable." }, { status: 503 });
+    if (claimed !== true) return NextResponse.json({ error: "Your 3 AI tailoring uses are finished." }, { status: 429 });
 
     // STEP 1: score the untouched original resume, IN PARALLEL with
     // generating the first candidate. These two calls don't depend on
