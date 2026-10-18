@@ -31,6 +31,7 @@ export default function ResumeApp() {
   const [dragging, setDragging] = useState(false);
 
   const [used, setUsed] = useState(0);
+  const [serverUsage, setServerUsage] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
 
