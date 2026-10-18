@@ -185,7 +185,7 @@ export async function POST(request: Request) {
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const bearer = request.headers.get("authorization")?.match(/^Bearer (\\S+)$/i)?.[1];
+    const bearer = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1];
     if (!url || !key || !bearer) return NextResponse.json({ error: "Sign in to use AI tailoring." }, { status: 401 });
     const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${bearer}` } } });
     const { data: userData, error: authError } = await supabase.auth.getUser(bearer);
