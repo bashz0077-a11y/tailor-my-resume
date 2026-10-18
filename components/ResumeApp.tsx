@@ -108,7 +108,7 @@ async function parseFile(file?: File) {
 
     if (!resume.trim() || !job.trim()) { setError("Add your resume and the job description before continuing."); return; }
 
-    if ((serverUsage ?? used) >= FREE_LIMIT) { setError("You’ve used all 3 free tailored resumes."); return; }
+    // The server enforces the Gemini quota. Never block free local tailoring with browser storage.
 
     setLoading(true);
 
@@ -131,7 +131,6 @@ async function parseFile(file?: File) {
       setResult(data);
 
       const next = used + 1; setUsed(next); localStorage.setItem("tmr-uses", String(next));
-      if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
       if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -254,7 +253,7 @@ async function parseFile(file?: File) {
 
         {error && <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-[#e9bdc4] bg-[#fff3f4] p-4 text-sm font-semibold text-[#8f3443]"><X className="mt-0.5 shrink-0" size={17}/>{error}</div>}
 
-        <div className="mt-7 flex flex-col items-center"><button onClick={tailor} disabled={loading || uploading || used>=FREE_LIMIT} className="focus-ring flex min-w-64 items-center justify-center gap-2 rounded-full bg-[#52205f] px-7 py-4 font-extrabold text-white shadow-[0_12px_30px_rgba(82,32,95,.24)] transition hover:-translate-y-0.5 hover:bg-[#6e2d80] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">{loading?<><span className="loader"/>Finding your strongest match…</>:<>Tailor my application <ArrowRight size={18}/></>}</button><p className="mt-3 text-sm text-[#87798b]">One click uses one free tailoring credit</p></div>
+        <div className="mt-7 flex flex-col items-center"><button onClick={tailor} disabled={loading || uploading} className="focus-ring flex min-w-64 items-center justify-center gap-2 rounded-full bg-[#52205f] px-7 py-4 font-extrabold text-white shadow-[0_12px_30px_rgba(82,32,95,.24)] transition hover:-translate-y-0.5 hover:bg-[#6e2d80] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">{loading?<><span className="loader"/>Finding your strongest match…</>:<>Tailor my application <ArrowRight size={18}/></>}</button><p className="mt-3 text-sm text-[#87798b]">One click uses one free tailoring credit</p></div>
 
       </section>
 
