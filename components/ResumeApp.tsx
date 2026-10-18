@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 
 import { ArrowRight, Check, Clipboard, Download, FileText, LockKeyhole, Sparkles, UploadCloud, X } from "lucide-react";
 
@@ -93,7 +94,15 @@ export default function ResumeApp() {
 
     try {
 
-      const response = await fetch("/api/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resume, jobDescription: job }) });
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (url && key) {
+        const supabase = createClient(url, key);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const response = await fetch("/api/tailor", { method: "POST", headers, body: JSON.stringify({ resume, jobDescription: job }) });
 
       const data = await response.json();
 
