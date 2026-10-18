@@ -54,7 +54,26 @@ export default function ResumeApp() {
   }, []);
 
 
-  async function parseFile(file?: File) {
+    async function refreshAiUsage(token: string) {
+    try {
+      const response = await fetch("/api/ai-usage", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (!response.ok) return;
+      const data: { used?: number } = await response.json();
+      if (typeof data.used === "number") setServerUsage(data.used);
+    } catch { /* No change to server quota on a failed read. */ }
+  }
+
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+    const client = createClient(url, key);
+    void client.auth.getSession().then(({ data }) => {
+      if (data.session?.access_token) void refreshAiUsage(data.session.access_token);
+    });
+  }, []);
+
+async function parseFile(file?: File) {
 
     if (!file) return;
 
@@ -112,6 +131,7 @@ export default function ResumeApp() {
       setResult(data);
 
       const next = used + 1; setUsed(next); localStorage.setItem("tmr-uses", String(next));
+      if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
       if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
