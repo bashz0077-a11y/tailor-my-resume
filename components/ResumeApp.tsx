@@ -168,7 +168,7 @@ async function parseFile(file?: File) {
       <a href="#top" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</a>
       <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link href="/resume-builder" className="hover:text-[#52205f]">Resume Builder</Link><Link aria-current="page" href="/tailor" className="text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
 
-      <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-used)}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
+      <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-(serverUsage ?? used))}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
 
     </header>
 
