@@ -31,6 +31,7 @@ export default function ResumeApp() {
   const [dragging, setDragging] = useState(false);
 
   const [used, setUsed] = useState(0);
+  const [serverUsage, setServerUsage] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +54,26 @@ export default function ResumeApp() {
   }, []);
 
 
-  async function parseFile(file?: File) {
+    async function refreshAiUsage(token: string) {
+    try {
+      const response = await fetch("/api/ai-usage", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (!response.ok) return;
+      const data: { used?: number } = await response.json();
+      if (typeof data.used === "number") setServerUsage(data.used);
+    } catch { /* No change to server quota on a failed read. */ }
+  }
+
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+    const client = createClient(url, key);
+    void client.auth.getSession().then(({ data }) => {
+      if (data.session?.access_token) void refreshAiUsage(data.session.access_token);
+    });
+  }, []);
+
+async function parseFile(file?: File) {
 
     if (!file) return;
 
@@ -88,7 +108,7 @@ export default function ResumeApp() {
 
     if (!resume.trim() || !job.trim()) { setError("Add your resume and the job description before continuing."); return; }
 
-    if (used >= FREE_LIMIT) { setError("You’ve used all 3 free tailored resumes on this browser."); return; }
+    if ((serverUsage ?? used) >= FREE_LIMIT) { setError("You’ve used all 3 free tailored resumes."); return; }
 
     setLoading(true);
 
@@ -111,6 +131,8 @@ export default function ResumeApp() {
       setResult(data);
 
       const next = used + 1; setUsed(next); localStorage.setItem("tmr-uses", String(next));
+      if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
+      if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 
@@ -146,7 +168,7 @@ export default function ResumeApp() {
       <a href="#top" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</a>
       <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link href="/resume-builder" className="hover:text-[#52205f]">Resume Builder</Link><Link aria-current="page" href="/tailor" className="text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
 
-      <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-used)}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
+      <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-(serverUsage ?? used))}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
 
     </header>
 
