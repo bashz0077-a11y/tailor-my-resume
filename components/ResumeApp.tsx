@@ -30,8 +30,8 @@ export default function ResumeApp() {
 
   const [dragging, setDragging] = useState(false);
 
-  const [used, setUsed] = useState(0);
   const [serverUsage, setServerUsage] = useState<number | null>(null);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +45,7 @@ export default function ResumeApp() {
 
 
   useEffect(() => {
-    setUsed(Number(localStorage.getItem("tmr-uses") || 0));
+
     const prefill = sessionStorage.getItem("tmr-prefill-resume");
     if (prefill) { setResume(prefill); sessionStorage.removeItem("tmr-prefill-resume"); }
     const jobPrefill = sessionStorage.getItem("tmr-prefill-job");
@@ -64,6 +64,9 @@ export default function ResumeApp() {
   }
 
   useEffect(() => {
+    void fetch("/api/ai-mode", { cache: "no-store" })
+      .then(async response => { if (response.ok) { const mode: { enabled?: boolean } = await response.json(); setAiEnabled(mode.enabled === true); } })
+      .catch(() => { /* Mode unknown; do not claim unlimited AI access. */ });
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) return;
@@ -130,7 +133,6 @@ async function parseFile(file?: File) {
 
       setResult(data);
 
-      const next = used + 1; setUsed(next); localStorage.setItem("tmr-uses", String(next));
       if (headers.Authorization) void refreshAiUsage(headers.Authorization.slice(7));
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -167,7 +169,7 @@ async function parseFile(file?: File) {
       <a href="#top" className="flex items-center gap-2.5 font-extrabold tracking-[-.04em] text-[#24152b]"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#52205f] text-[#dfff6b]"><FileText size={18}/></span>TailorMyResume</a>
       <nav aria-label="Main navigation" className="flex w-full flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-[#63536a] sm:w-auto"><Link href="/resume-builder" className="hover:text-[#52205f]">Resume Builder</Link><Link aria-current="page" href="/tailor" className="text-[#52205f]">Tailor Resume</Link><Link href="/jobs" className="hover:text-[#52205f]">Jobs</Link></nav>
 
-      <div className="flex items-center gap-3"><CountBadge remaining={Math.max(0, FREE_LIMIT-(serverUsage ?? used))}/><a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
+      <div className="flex items-center gap-3">{aiEnabled === false ? <span className="rounded-full border border-[#e1d8e5] bg-white/80 px-3 py-1.5 text-sm font-bold text-[#60346e]">Free local tailoring</span> : aiEnabled === true && serverUsage !== null ? <CountBadge remaining={Math.max(0, FREE_LIMIT-serverUsage)}/> : <span className="rounded-full border border-[#e1d8e5] bg-white/80 px-3 py-1.5 text-sm font-bold text-[#60346e]">{aiEnabled ? "Sign in to view AI uses" : "Checking AI availability…"}</span>}<a href="#workspace" className="focus-ring hidden rounded-full bg-[#24152b] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#52205f] sm:block">Start tailoring</a></div>
 
     </header>
 
@@ -253,7 +255,7 @@ async function parseFile(file?: File) {
 
         {error && <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-[#e9bdc4] bg-[#fff3f4] p-4 text-sm font-semibold text-[#8f3443]"><X className="mt-0.5 shrink-0" size={17}/>{error}</div>}
 
-        <div className="mt-7 flex flex-col items-center"><button onClick={tailor} disabled={loading || uploading} className="focus-ring flex min-w-64 items-center justify-center gap-2 rounded-full bg-[#52205f] px-7 py-4 font-extrabold text-white shadow-[0_12px_30px_rgba(82,32,95,.24)] transition hover:-translate-y-0.5 hover:bg-[#6e2d80] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">{loading?<><span className="loader"/>Finding your strongest match…</>:<>Tailor my application <ArrowRight size={18}/></>}</button><p className="mt-3 text-sm text-[#87798b]">One click uses one free tailoring credit</p></div>
+        <div className="mt-7 flex flex-col items-center"><button onClick={tailor} disabled={loading || uploading} className="focus-ring flex min-w-64 items-center justify-center gap-2 rounded-full bg-[#52205f] px-7 py-4 font-extrabold text-white shadow-[0_12px_30px_rgba(82,32,95,.24)] transition hover:-translate-y-0.5 hover:bg-[#6e2d80] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">{loading?<><span className="loader"/>Finding your strongest match…</>:<>Tailor my application <ArrowRight size={18}/></>}</button><p className="mt-3 text-sm text-[#87798b]">{aiEnabled === false ? "Free local tailoring — no AI credits used" : aiEnabled === true ? "Gemini tailoring uses one AI credit per request" : "Checking tailoring mode…"}</p></div>
 
       </section>
 
