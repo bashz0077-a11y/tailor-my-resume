@@ -4,7 +4,7 @@
 
 Use a **separate disposable Supabase project**, with the PR64 and PR67 migrations applied. Create a dedicated test account through normal Supabase Auth and verify it has zero uses. Do not use the production TailorMyResume database or real customers.
 
-Set `TEST_SUPABASE_URL`, `TEST_SUPABASE_ANON_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, and `CONFIRM_DISPOSABLE_TEST_PROJECT=yes` in a local test shell. Run `npx tsx tests/ai-quota-concurrency.ts` (tsx is a test runner, not a production dependency). The harness sends ten simultaneous RPC requests and asserts exactly three succeed, the fourth is rejected, and usage equals three. It will fail if credentials or a disposable environment are unavailable; **do not claim it passed without executing it**.
+Set `TEST_SUPABASE_URL`, `TEST_SUPABASE_ANON_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, and `CONFIRM_DISPOSABLE_TEST_PROJECT=yes` in a local test shell. Run `npm run test:quota` using Node.js 22.16+ after `npm ci`. The script uses built-in TypeScript stripping, so no extra package or paid service is needed. The harness sends ten simultaneous RPC requests and asserts exactly three succeed, the fourth is rejected, and usage equals three. It will fail if credentials or a disposable environment are unavailable; **do not claim it passed without executing it**.
 
 ## Failed Gemini generations
 
